@@ -1,0 +1,83 @@
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+
+/**
+ * Auth store — persisted to localStorage.
+ *
+ * user shape (normalised from API):
+ * {
+ *   id, email, name, role, avatarUrl
+ * }
+ *
+ * agency shape:
+ * {
+ *   id, name, license_number
+ * }
+ *
+ * API roles: 'agency_owner' | 'agent' | 'super_admin'
+ */
+export const useAuthStore = create(
+  persist(
+    (set, get) => ({
+      user: null,
+      agency: null,
+      token: null,         // access token
+      refreshToken: null,
+      isAuthenticated: false,
+
+      /**
+       * Called after successful login or register.
+       * Normalises the API response shape into the store.
+       *
+       * @param {object} apiUser   - { id, email, full_name, role }
+       * @param {string} access    - JWT access token
+       * @param {string} refresh   - JWT refresh token
+       * @param {object} agency    - { id, name, license_number }
+       */
+      setAuth: (apiUser, access, refresh, agency) => {
+        const user = {
+          id: apiUser.id,
+          email: apiUser.email,
+          name: apiUser.full_name,
+          role: apiUser.role,
+          avatarUrl: null,
+        }
+        set({
+          user,
+          agency,
+          token: access,
+          refreshToken: refresh,
+          isAuthenticated: true,
+        })
+      },
+
+      updateUser: (updates) => {
+        set((state) => ({ user: { ...state.user, ...updates } }))
+      },
+
+      clearAuth: () => {
+        set({
+          user: null,
+          agency: null,
+          token: null,
+          refreshToken: null,
+          isAuthenticated: false,
+        })
+      },
+
+      getRole: () => get().user?.role ?? null,
+
+      hasRole: (...roles) => roles.includes(get().user?.role),
+    }),
+    {
+      name: 'nexora_auth',
+      partialize: (state) => ({
+        user: state.user,
+        agency: state.agency,
+        token: state.token,
+        refreshToken: state.refreshToken,
+        isAuthenticated: state.isAuthenticated,
+      }),
+    }
+  )
+)

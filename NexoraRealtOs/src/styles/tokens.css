@@ -1,0 +1,136 @@
+/* ============================================================
+   Nexora RealtyOS — Design Tokens
+   Source of truth for all design decisions
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+
+@theme {
+  /* ── Colors ─────────────────────────────────────────────── */
+
+  /* Primary — Forest Green */
+  --color-primary-50:  #eef3f0;
+  --color-primary-100: #d5e3da;
+  --color-primary-200: #adc8b6;
+  --color-primary-300: #82ab93;
+  --color-primary-400: #628f73;
+  --color-primary-500: #496B5A;   /* brand primary */
+  --color-primary-600: #3a5649;
+  --color-primary-700: #2c4237;
+  --color-primary-800: #1e2d26;
+  --color-primary-900: #0f1913;
+
+  /* Secondary — Sage */
+  --color-secondary-50:  #f4f8f5;
+  --color-secondary-100: #e3ede7;
+  --color-secondary-200: #c5dace;
+  --color-secondary-300: #a6c7b4;
+  --color-secondary-400: #8FAF9B;  /* brand secondary */
+  --color-secondary-500: #769686;
+  --color-secondary-600: #5e7d6c;
+  --color-secondary-700: #476353;
+  --color-secondary-800: #304939;
+  --color-secondary-900: #18301e;
+
+  /* Tertiary — Teal */
+  --color-tertiary-50:  #f0f8f8;
+  --color-tertiary-100: #d9eeee;
+  --color-tertiary-200: #b3dddd;
+  --color-tertiary-300: #8dcbcc;
+  --color-tertiary-400: #6FAFA8;   /* brand tertiary */
+  --color-tertiary-500: #58938d;
+  --color-tertiary-600: #437871;
+  --color-tertiary-700: #315c57;
+  --color-tertiary-800: #20403d;
+  --color-tertiary-900: #102422;
+
+  /* Neutral — Charcoal */
+  --color-neutral-50:  #f0f2f3;
+  --color-neutral-100: #d8dcdf;
+  --color-neutral-200: #b2b9be;
+  --color-neutral-300: #8b969d;
+  --color-neutral-400: #637079;
+  --color-neutral-500: #263238;   /* brand neutral */
+  --color-neutral-600: #1f2a30;
+  --color-neutral-700: #182128;
+  --color-neutral-800: #111820;
+  --color-neutral-900: #0a0f13;
+
+  /* Surface / Background */
+  --color-surface:        #F8FAFA;
+  --color-surface-raised: #FFFFFF;
+  --color-surface-sunken: #EEF2F2;
+  --color-border:         #DDE5E3;
+  --color-border-strong:  #B8C9C5;
+
+  /* Semantic */
+  --color-success:  #22c55e;
+  --color-warning:  #f59e0b;
+  --color-error:    #ef4444;
+  --color-info:     #3b82f6;
+
+  /* ── Typography ─────────────────────────────────────────── */
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+
+  --text-display-2xl: 4.5rem;   /* 72px */
+  --text-display-xl:  3.75rem;  /* 60px */
+  --text-display-lg:  3rem;     /* 48px */
+  --text-display-md:  2.25rem;  /* 36px */
+  --text-display-sm:  1.875rem; /* 30px */
+  --text-display-xs:  1.5rem;   /* 24px */
+
+  --text-xl:   1.25rem;   /* 20px */
+  --text-lg:   1.125rem;  /* 18px */
+  --text-md:   1rem;      /* 16px */
+  --text-sm:   0.875rem;  /* 14px */
+  --text-xs:   0.75rem;   /* 12px */
+
+  /* ── Spacing ─────────────────────────────────────────────── */
+  --spacing-0:   0;
+  --spacing-1:   0.25rem;
+  --spacing-2:   0.5rem;
+  --spacing-3:   0.75rem;
+  --spacing-4:   1rem;
+  --spacing-5:   1.25rem;
+  --spacing-6:   1.5rem;
+  --spacing-8:   2rem;
+  --spacing-10:  2.5rem;
+  --spacing-12:  3rem;
+  --spacing-16:  4rem;
+  --spacing-20:  5rem;
+  --spacing-24:  6rem;
+
+  /* ── Border Radius ───────────────────────────────────────── */
+  --radius-sm:   0.25rem;
+  --radius-md:   0.5rem;
+  --radius-lg:   0.75rem;
+  --radius-xl:   1rem;
+  --radius-2xl:  1.5rem;
+  --radius-full: 9999px;
+
+  /* ── Shadows ─────────────────────────────────────────────── */
+  --shadow-xs:  0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm:  0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+  --shadow-md:  0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-lg:  0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --shadow-xl:  0 20px 25px -5px rgb(0 0 0 / 0.07), 0 8px 10px -6px rgb(0 0 0 / 0.05);
+
+  /* ── Z-index ─────────────────────────────────────────────── */
+  --z-base:    0;
+  --z-raised:  10;
+  --z-dropdown: 100;
+  --z-sticky:  200;
+  --z-overlay: 300;
+  --z-modal:   400;
+  --z-toast:   500;
+
+  /* ── Transitions ─────────────────────────────────────────── */
+  --transition-fast:   150ms ease;
+  --transition-base:   200ms ease;
+  --transition-slow:   300ms ease;
+
+  /* ── Sidebar ─────────────────────────────────────────────── */
+  --sidebar-width:          240px;
+  --sidebar-width-collapsed: 64px;
+  --topbar-height:          60px;
+}
