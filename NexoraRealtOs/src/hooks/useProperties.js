@@ -1,0 +1,140 @@
+import { useQuery } from '@tanstack/react-query'
+import { getProperties } from '@/services/propertyService'
+
+export const PROPERTIES_KEY = ['properties']
+
+export function useProperties() {
+  return useQuery({
+    queryKey: PROPERTIES_KEY,
+    queryFn: getProperties,
+    // Fall back to mock data while backend has no real listings yet
+    placeholderData: MOCK_PROPERTIES,
+  })
+}
+
+// ── Mock data — matches the API shape exactly ─────────────────
+// Remove once the real API returns populated data.
+export const MOCK_PROPERTIES = [
+  {
+    id: 1,
+    title: '3BHK Modern Villa',
+    property_type: 'house',
+    purpose: 'sale',
+    price: '45000000',
+    province: 'Bagmati',
+    district: 'Lalitpur',
+    city: 'Bhaisepati',
+    address: 'Bhaisepati, Lalitpur',
+    bedrooms: 3,
+    bathrooms: 2,
+    area: '5 Aana',
+    status: 'active',
+    leads: 12,
+    views: 450,
+    created_at: '2026-06-01T10:00:00Z',
+    updated_at: '2026-06-10T10:00:00Z',
+    agency: 1,
+    assigned_agent: { id: 1, full_name: 'Siddharth KC', avatarUrl: null },
+    media: [
+      {
+        id: 1,
+        media_type: 'image',
+        file: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=600&q=80',
+        is_primary: true,
+      },
+    ],
+    featured: false,
+  },
+  {
+    id: 2,
+    title: 'Luxury Penthouse',
+    property_type: 'apartment',
+    purpose: 'sale',
+    price: '125000000',
+    province: 'Bagmati',
+    district: 'Lalitpur',
+    city: 'Sanepa',
+    address: 'Sanepa, Lalitpur',
+    bedrooms: 4,
+    bathrooms: 4,
+    area: '3200 sqft',
+    status: 'sold',
+    leads: 89,
+    views: 2400,
+    created_at: '2026-05-15T10:00:00Z',
+    updated_at: '2026-06-12T10:00:00Z',
+    agency: 1,
+    assigned_agent: { id: 2, full_name: 'Priya Thapa', avatarUrl: null },
+    media: [
+      {
+        id: 2,
+        media_type: 'image',
+        file: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&q=80',
+        is_primary: true,
+      },
+    ],
+    featured: true,
+  },
+  {
+    id: 3,
+    title: 'Hillside Retreat',
+    property_type: 'house',
+    purpose: 'sale',
+    price: '182000000',
+    province: 'Bagmati',
+    district: 'Kathmandu',
+    city: 'Budhanilkantha',
+    address: 'Budhanilkantha, Ktm',
+    bedrooms: 6,
+    bathrooms: 5,
+    area: '1.5 Ropani',
+    status: 'pending',
+    leads: 34,
+    views: 1100,
+    created_at: '2026-06-05T10:00:00Z',
+    updated_at: '2026-06-18T10:00:00Z',
+    agency: 1,
+    assigned_agent: { id: 3, full_name: 'Aarav Sharma', avatarUrl: null },
+    media: [
+      {
+        id: 3,
+        media_type: 'image',
+        file: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&q=80',
+        is_primary: true,
+      },
+    ],
+    featured: false,
+  },
+  {
+    id: 4,
+    title: 'Corporate Office Space',
+    property_type: 'commercial',
+    purpose: 'rent',
+    price: '420000',
+    province: 'Bagmati',
+    district: 'Kathmandu',
+    city: 'Kamaladi',
+    address: 'Kamaladi, Kathmandu',
+    bedrooms: null,
+    bathrooms: null,
+    floors: 2,
+    parking: 'Available',
+    area: '4500 sqft',
+    status: 'active',
+    leads: 21,
+    views: 820,
+    created_at: '2026-06-08T10:00:00Z',
+    updated_at: '2026-06-20T10:00:00Z',
+    agency: 1,
+    assigned_agent: { id: 1, full_name: 'Siddharth KC', avatarUrl: null },
+    media: [
+      {
+        id: 4,
+        media_type: 'image',
+        file: 'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=600&q=80',
+        is_primary: true,
+      },
+    ],
+    featured: false,
+  },
+]
