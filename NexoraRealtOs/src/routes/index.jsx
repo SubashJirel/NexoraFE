@@ -65,11 +65,16 @@ export const router = createBrowserRouter([
         handle: { title: 'Leads' },
         lazy: () => import('@/pages/leads/LeadsPage').then((m) => ({ Component: m.default })),
       },
-      // ── Properties (Sprint 2) ───────────────────────────────
+      // ── Properties ─────────────────────────────────────────
       {
         path: 'properties',
         handle: { title: 'Properties' },
         lazy: () => import('@/pages/properties/PropertiesPage').then((m) => ({ Component: m.default })),
+      },
+      {
+        path: 'properties/add',
+        handle: { title: 'Add Property' },
+        lazy: () => import('@/pages/properties/add/AddPropertyPage').then((m) => ({ Component: m.default })),
       },
       // ── Contacts ───────────────────────────────────────────
       {

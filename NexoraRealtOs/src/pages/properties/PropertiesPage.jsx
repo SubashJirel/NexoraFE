@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Plus, FileText, LayoutGrid, List, Search } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useProperties } from '@/hooks/useProperties'
 import PropertyCard from './components/PropertyCard'
 import PropertyFilters from './components/PropertyFilters'
@@ -16,6 +17,7 @@ const EMPTY_FILTERS = {
 
 export default function PropertiesPage() {
   const { data: properties = [], isLoading, isError } = useProperties()
+  const navigate = useNavigate()
 
   const [view, setView] = useState('grid')          // 'grid' | 'list'
   const [search, setSearch] = useState('')
@@ -80,6 +82,7 @@ export default function PropertiesPage() {
             variant="primary"
             size="md"
             leftIcon={<Plus size={15} />}
+            onClick={() => navigate('/properties/add')}
           >
             Add Property
           </Button>

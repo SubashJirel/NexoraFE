@@ -2,9 +2,82 @@ import apiClient from '@/lib/axios'
 
 /**
  * GET /api/properties/
- * Returns the full list of properties for the authenticated agency.
  */
 export async function getProperties() {
   const { data } = await apiClient.get('/properties/')
   return data
+}
+
+/**
+ * POST /api/properties/
+ * Creates a new property and returns it with its generated id.
+ *
+ * @param {object} payload - property fields (no media)
+ * @returns {object} created property (id, title, …)
+ */
+export async function createProperty(payload) {
+  const { data } = await apiClient.post('/properties/', payload)
+  return data   // 201 response contains the full property including id
+}
+
+/**
+ * POST /api/properties/{propertyId}/media/
+ * Uploads a single media file for a property.
+ *
+ * The file is sent as multipart/form-data so the backend receives
+ * a real file object, not a base64 string.
+ *
+ * @param {number|string} propertyId
+ * @param {object} mediaPayload - { file: File, media_type, title, caption, sort_order, is_primary }
+ */
+export async function uploadPropertyMedia(propertyId, mediaPayload) {
+  const form = new FormData()
+  form.append('media_type', mediaPayload.media_type || 'image')
+  form.append('file',       mediaPayload.file)
+  form.append('is_primary', String(mediaPayload.is_primary ?? false))
+  form.append('sort_order', String(mediaPayload.sort_order ?? 0))
+  if (mediaPayload.title)   form.append('title',   mediaPayload.title)
+  if (mediaPayload.caption) form.append('caption', mediaPayload.caption)
+
+  const { data } = await apiClient.post(
+    `/properties/${propertyId}/media/`,
+    form,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  )
+  return data
+}
+
+/**
+ * Orchestrates both APIs as a single atomic action:
+ *  1. POST /api/properties/          → get propertyId
+ *  2. POST /api/properties/{id}/media/ for each file (parallel)
+ *
+ * @param {object}   propertyPayload - form fields
+ * @param {File[]}   mediaFiles      - array of File objects (may be empty)
+ * @returns {object} created property with populated media array
+ */
+export async function createPropertyWithMedia(propertyPayload, mediaFiles = []) {
+  // Step 1 — create the property
+  const property = await createProperty(propertyPayload)
+
+  // Step 2 — upload all media in parallel (fire-and-forget style;
+  //           if media fails we still have the property)
+  if (mediaFiles.length > 0) {
+    const uploads = mediaFiles.map((file, index) =>
+      uploadPropertyMedia(property.id, {
+        file,
+        media_type: file.type.startsWith('video') ? 'video' : 'image',
+        is_primary: index === 0,   // first image is primary
+        sort_order: index,
+        title: file.name.replace(/\.[^.]+$/, ''),
+      })
+    )
+    const results = await Promise.allSettled(uploads)
+    // Attach successful uploads to the returned object
+    property.media = results
+      .filter((r) => r.status === 'fulfilled')
+      .map((r) => r.value)
+  }
+
+  return property
 }
