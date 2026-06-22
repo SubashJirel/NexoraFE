@@ -9,6 +9,18 @@ export async function getProperties() {
 }
 
 /**
+ * GET /api/properties/{propertyId}/
+ * Fetches a single property with its full details.
+ *
+ * @param {number|string} propertyId
+ * @returns {object}
+ */
+export async function getProperty(propertyId) {
+  const { data } = await apiClient.get(`/properties/${propertyId}/`)
+  return data
+}
+
+/**
  * POST /api/properties/
  * Creates a new property and returns it with its generated id.
  *

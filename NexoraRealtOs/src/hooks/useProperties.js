@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { getProperties } from '@/services/propertyService'
+import { getProperties, getProperty } from '@/services/propertyService'
 
 export const PROPERTIES_KEY = ['properties']
+
+export const PROPERTY_KEY = (id) => ['properties', id]
 
 export function useProperties() {
   return useQuery({
@@ -9,6 +11,14 @@ export function useProperties() {
     queryFn: getProperties,
     // Fall back to mock data while backend has no real listings yet
     placeholderData: MOCK_PROPERTIES,
+  })
+}
+
+export function useProperty(propertyId) {
+  return useQuery({
+    queryKey: PROPERTY_KEY(propertyId),
+    queryFn: () => getProperty(propertyId),
+    enabled: Boolean(propertyId),
   })
 }
 

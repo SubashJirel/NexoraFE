@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { MapPin, Bed, Bath, Maximize2, MoreVertical, Heart, Eye, PhoneCall, Building2, Layers } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/cn'
 import Avatar from '@/components/ui/Avatar'
 import Badge from '@/components/ui/Badge'
@@ -41,6 +42,7 @@ function PropertyTypeIcon({ type }) {
 export default function PropertyCard({ property, view = 'grid' }) {
   const [liked, setLiked] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const navigate = useNavigate()
 
   const primaryMedia = property.media?.find((m) => m.is_primary) || property.media?.[0]
   const imageUrl = primaryMedia?.file || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600&q=80'
@@ -105,7 +107,10 @@ export default function PropertyCard({ property, view = 'grid' }) {
               <MoreVertical size={15} />
             </button>
             {menuOpen && (
-              <PropertyMenu onClose={() => setMenuOpen(false)} />
+              <PropertyMenu
+                onClose={() => setMenuOpen(false)}
+                onViewDetails={() => navigate(`/properties/${property.id}`)}
+              />
             )}
           </div>
         </div>
@@ -221,7 +226,7 @@ function PropertyListRow({ property, status, purpose, imageUrl, liked, setLiked 
 }
 
 // ── Context menu ──────────────────────────────────────────────
-function PropertyMenu({ onClose }) {
+function PropertyMenu({ onClose, onViewDetails }) {
   return (
     <>
       <div className="fixed inset-0 z-10" onClick={onClose} />
@@ -229,7 +234,10 @@ function PropertyMenu({ onClose }) {
         {['View details', 'Edit', 'Mark as sold', 'Delete'].map((item) => (
           <button
             key={item}
-            onClick={onClose}
+            onClick={() => {
+              if (item === 'View details') onViewDetails?.()
+              onClose()
+            }}
             className={cn(
               'w-full px-4 py-2.5 text-left text-xs hover:bg-[#F8FAFA] transition-colors',
               item === 'Delete' ? 'text-red-500' : 'text-[#263238]'
