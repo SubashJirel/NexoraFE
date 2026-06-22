@@ -2,12 +2,23 @@ import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
 import { cn } from '@/lib/cn'
 
-const PROPERTY_TYPES = ['house', 'apartment', 'land', 'commercial', 'villa', 'office']
-const PURPOSES       = ['sale', 'rent', 'lease']
+const PROPERTY_TYPES = [
+  { value: 'house',      label: 'House' },
+  { value: 'apartment',  label: 'Apartment' },
+  { value: 'land',       label: 'Land' },
+  { value: 'commercial', label: 'Commercial' },
+  { value: 'villa',      label: 'Villa' },
+  { value: 'office',     label: 'Office' },
+]
+
+const PURPOSES = ['sale', 'rent', 'lease']
+
+const CURRENCIES = ['NPR', 'USD', 'INR']
 
 export default function Step1BasicInfo({ form, errors, onChange }) {
   return (
     <div className="space-y-5">
+
       {/* Title */}
       <Input
         label="Property Title"
@@ -28,9 +39,7 @@ export default function Step1BasicInfo({ form, errors, onChange }) {
         >
           <option value="">Select type</option>
           {PROPERTY_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t.charAt(0).toUpperCase() + t.slice(1)}
-            </option>
+            <option key={t.value} value={t.value}>{t.label}</option>
           ))}
         </Select>
 
@@ -58,25 +67,37 @@ export default function Step1BasicInfo({ form, errors, onChange }) {
         </div>
       </div>
 
-      {/* Price + Province */}
-      <div className="grid grid-cols-2 gap-4">
-        <Input
-          label="Price (NPR)"
-          type="number"
-          placeholder="e.g. 4500000"
-          value={form.price}
-          onChange={(e) => onChange('price', e.target.value)}
-          error={errors.price}
-          leftAddon={<span className="text-xs font-semibold text-[#8b969d]">NPR</span>}
-        />
-        <Input
-          label="Province"
-          placeholder="e.g. Bagmati Province"
-          value={form.province}
-          onChange={(e) => onChange('province', e.target.value)}
-          error={errors.province}
-        />
+      {/* Price + Currency */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="col-span-2">
+          <Input
+            label="Price"
+            type="number"
+            placeholder="e.g. 4500000"
+            value={form.price}
+            onChange={(e) => onChange('price', e.target.value)}
+            error={errors.price}
+          />
+        </div>
+        <Select
+          label="Currency"
+          value={form.currency}
+          onChange={(e) => onChange('currency', e.target.value)}
+        >
+          {CURRENCIES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </Select>
       </div>
+
+      {/* Province */}
+      <Input
+        label="Province"
+        placeholder="e.g. Bagmati Province"
+        value={form.province}
+        onChange={(e) => onChange('province', e.target.value)}
+        error={errors.province}
+      />
     </div>
   )
 }

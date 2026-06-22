@@ -1,13 +1,19 @@
 import { Minus, Plus } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import Input from '@/components/ui/Input'
+import Select from '@/components/ui/Select'
 
-const FEATURES = [
+// ── Amenity chips — serialised as comma-joined string for the API ──
+const AMENITY_OPTIONS = [
   '24/7 Water', 'Electricity', 'Car Parking', 'Drainage',
-  'Backyard',   'Solar Panel', 'Earthquake-Safe', 'Vastu Compliant',
+  'Backyard', 'Solar Panel', 'Earthquake-Safe', 'Vastu Compliant',
+  'CCTV', 'Internet', 'Lift', 'Swimming Pool',
 ]
 
-function Counter({ label, value, onChange, min = 0, max = 20 }) {
+const AREA_UNITS      = ['aana', 'ropani', 'sqft', 'sqm', 'dhur', 'bigha', 'kattha']
+const ROAD_UNITS      = ['ft', 'm']
+
+function Counter({ label, value, onChange, min = 0, max = 30 }) {
   return (
     <div className="flex flex-col gap-1.5">
       <span className="text-sm font-medium text-[#263238]">{label}</span>
@@ -34,79 +40,116 @@ function Counter({ label, value, onChange, min = 0, max = 20 }) {
   )
 }
 
-export default function Step3Details({ form, errors, onChange }) {
-  const isCommercial = form.property_type === 'commercial' || form.property_type === 'land'
+// Value + unit side-by-side field
+function MeasurementField({ label, valueKey, unitKey, valuePlaceholder, units, form, errors, onChange }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium text-[#263238]">{label}</span>
+      <div className="flex gap-2">
+        <Input
+          placeholder={valuePlaceholder}
+          type="number"
+          value={form[valueKey]}
+          onChange={(e) => onChange(valueKey, e.target.value)}
+          error={errors?.[valueKey]}
+          className="flex-1"
+        />
+        <Select
+          value={form[unitKey]}
+          onChange={(e) => onChange(unitKey, e.target.value)}
+          className="w-28 shrink-0"
+        >
+          {units.map((u) => (
+            <option key={u} value={u}>{u}</option>
+          ))}
+        </Select>
+      </div>
+      {errors?.[valueKey] && (
+        <p className="text-xs text-[#ef4444]">{errors[valueKey]}</p>
+      )}
+    </div>
+  )
+}
 
-  function toggleFeature(feature) {
-    const current = form.features || []
-    onChange(
-      'features',
-      current.includes(feature)
-        ? current.filter((f) => f !== feature)
-        : [...current, feature]
-    )
+export default function Step3Details({ form, errors, onChange }) {
+  const isLand = form.property_type === 'land'
+
+  // amenities is a comma-joined string in the API
+  function toggleAmenity(item) {
+    const current = form.amenities
+      ? form.amenities.split(',').map((s) => s.trim()).filter(Boolean)
+      : []
+    const next = current.includes(item)
+      ? current.filter((a) => a !== item)
+      : [...current, item]
+    onChange('amenities', next.join(', '))
   }
+
+  const selectedAmenities = form.amenities
+    ? form.amenities.split(',').map((s) => s.trim()).filter(Boolean)
+    : []
 
   return (
     <div className="space-y-6">
-      {/* Counters */}
-      {!isCommercial && (
+
+      {/* Bed / Bath / Floors counters — not shown for land */}
+      {!isLand && (
         <div className="grid grid-cols-3 gap-6">
-          <Counter
-            label="Bedrooms"
-            value={form.bedrooms || 0}
-            onChange={(v) => onChange('bedrooms', v)}
-          />
-          <Counter
-            label="Bathrooms"
-            value={form.bathrooms || 0}
-            onChange={(v) => onChange('bathrooms', v)}
-          />
-          <Counter
-            label="Floors"
-            value={form.floors || 0}
-            onChange={(v) => onChange('floors', v)}
-          />
+          <Counter label="Bedrooms"  value={form.bedrooms}  onChange={(v) => onChange('bedrooms',  v)} />
+          <Counter label="Bathrooms" value={form.bathrooms} onChange={(v) => onChange('bathrooms', v)} />
+          <Counter label="Floors"    value={form.floors}    onChange={(v) => onChange('floors',    v)} />
         </div>
       )}
 
-      {/* Area + Built-up area */}
-      <div className="grid grid-cols-2 gap-4">
-        <Input
-          label="Land Area"
-          placeholder="e.g. 5 Aana / 1500 sqft"
-          value={form.land_area}
-          onChange={(e) => onChange('land_area', e.target.value)}
-          error={errors.land_area}
-        />
-        <Input
-          label="Built-up Area"
-          placeholder="e.g. 1500 sqft"
-          value={form.built_up_area}
-          onChange={(e) => onChange('built_up_area', e.target.value)}
-          error={errors.built_up_area}
-        />
-      </div>
-
-      {/* Road access */}
-      <Input
-        label="Road / Access (optional)"
-        placeholder="e.g. 13"
-        value={form.road_access}
-        onChange={(e) => onChange('road_access', e.target.value)}
+      {/* Land area */}
+      <MeasurementField
+        label="Land Area"
+        valueKey="land_area_value"
+        unitKey="land_area_unit"
+        valuePlaceholder="e.g. 5"
+        units={AREA_UNITS}
+        form={form}
+        errors={errors}
+        onChange={onChange}
       />
 
-      {/* Features / Amenities */}
+      {/* Built-up area — not relevant for land */}
+      {!isLand && (
+        <MeasurementField
+          label="Built-up Area"
+          valueKey="built_up_area_value"
+          unitKey="built_up_area_unit"
+          valuePlaceholder="e.g. 1500"
+          units={AREA_UNITS}
+          form={form}
+          errors={errors}
+          onChange={onChange}
+        />
+      )}
+
+      {/* Road access */}
+      <MeasurementField
+        label="Road / Access Width"
+        valueKey="road_access_value"
+        unitKey="road_access_unit"
+        valuePlaceholder="e.g. 13"
+        units={ROAD_UNITS}
+        form={form}
+        errors={errors}
+        onChange={onChange}
+      />
+
+      {/* Amenities */}
       <div className="space-y-2">
-        <span className="text-sm font-medium text-[#263238]">Features & Amenities</span>
+        <span className="text-sm font-medium text-[#263238]">Features &amp; Amenities</span>
         <div className="flex flex-wrap gap-2">
-          {FEATURES.map((f) => {
-            const active = (form.features || []).includes(f)
+          {AMENITY_OPTIONS.map((item) => {
+            const active = selectedAmenities.includes(item)
             return (
               <button
-                key={f}
+                key={item}
                 type="button"
-                onClick={() => toggleFeature(f)}
+                onClick={() => toggleAmenity(item)}
                 className={cn(
                   'px-3 py-1.5 rounded-lg border text-xs font-medium transition-all duration-150',
                   active
@@ -114,11 +157,16 @@ export default function Step3Details({ form, errors, onChange }) {
                     : 'bg-white text-[#637079] border-[#DDE5E3] hover:border-[#496B5A] hover:text-[#496B5A]'
                 )}
               >
-                {f}
+                {item}
               </button>
             )
           })}
         </div>
+        {selectedAmenities.length > 0 && (
+          <p className="text-xs text-[#8b969d]">
+            Selected: {selectedAmenities.join(', ')}
+          </p>
+        )}
       </div>
     </div>
   )
