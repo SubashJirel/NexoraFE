@@ -1,12 +1,8 @@
 import { cn } from '@/lib/cn'
 import Avatar from '@/components/ui/Avatar'
 import Select from '@/components/ui/Select'
-
-const MOCK_AGENTS = [
-  { id: 1, full_name: 'Siddharth KC' },
-  { id: 2, full_name: 'Priya Thapa' },
-  { id: 3, full_name: 'Aarav Sharma' },
-]
+import { Spinner } from '@/components/ui/index'
+import { useAgents } from '@/hooks/useAgents'
 
 const STATUS_OPTIONS = [
   { value: 'draft',   label: 'Draft — save without publishing' },
@@ -15,43 +11,77 @@ const STATUS_OPTIONS = [
 ]
 
 export default function Step6Publish({ form, errors, onChange }) {
+  const { data: agents = [], isLoading: agentsLoading, isError: agentsError } = useAgents()
+
+  // The agent selected in the form (used in the summary card)
+  const selectedAgent = agents.find((a) => a.id === form.assigned_agent)
+
   return (
     <div className="space-y-5">
 
-      {/* Assign to agent — maps to assigned_agent (id) */}
+      {/* ── Assign to Agent ───────────────────────────────── */}
       <div className="flex flex-col gap-2">
         <span className="text-sm font-medium text-[#263238]">Assign to Agent</span>
-        <div className="flex flex-wrap gap-2">
-          {MOCK_AGENTS.map((agent) => {
-            const active = form.assigned_agent === agent.id
-            return (
-              <button
-                key={agent.id}
-                type="button"
-                onClick={() => onChange('assigned_agent', active ? null : agent.id)}
-                className={cn(
-                  'flex items-center gap-2.5 px-4 py-2.5 rounded-xl border transition-all duration-150',
-                  active
-                    ? 'border-[#496B5A] bg-[#eef3f0] shadow-sm'
-                    : 'border-[#DDE5E3] bg-white hover:border-[#B8C9C5]'
-                )}
-              >
-                <Avatar alt={agent.full_name} size="sm" />
-                <span className={cn('text-sm font-medium', active ? 'text-[#496B5A]' : 'text-[#263238]')}>
-                  {agent.full_name}
-                </span>
-                {active && (
-                  <span className="text-[10px] bg-[#496B5A] text-white px-1.5 py-0.5 rounded-full">
-                    Primary
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
+
+        {agentsLoading && (
+          <div className="flex items-center gap-2 text-sm text-[#637079] py-3">
+            <Spinner size="sm" /> Loading agents…
+          </div>
+        )}
+
+        {agentsError && (
+          <p className="text-xs text-[#ef4444]">
+            Failed to load agents. Check your connection.
+          </p>
+        )}
+
+        {!agentsLoading && !agentsError && agents.length === 0 && (
+          <p className="text-xs text-[#8b969d]">
+            No agents found. Add agents from the Agents section first.
+          </p>
+        )}
+
+        {!agentsLoading && agents.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {agents
+              .filter((a) => a.is_active)   // only show active agents
+              .map((agent) => {
+                const active = form.assigned_agent === agent.id
+                return (
+                  <button
+                    key={agent.id}
+                    type="button"
+                    onClick={() => onChange('assigned_agent', active ? null : agent.id)}
+                    className={cn(
+                      'flex items-center gap-2.5 px-4 py-2.5 rounded-xl border transition-all duration-150',
+                      active
+                        ? 'border-[#496B5A] bg-[#eef3f0] shadow-sm'
+                        : 'border-[#DDE5E3] bg-white hover:border-[#B8C9C5]'
+                    )}
+                  >
+                    <Avatar alt={agent.full_name} size="sm" />
+                    <div className="text-left">
+                      <p className={cn(
+                        'text-sm font-medium leading-tight',
+                        active ? 'text-[#496B5A]' : 'text-[#263238]'
+                      )}>
+                        {agent.full_name}
+                      </p>
+                      <p className="text-[10px] text-[#8b969d]">{agent.email}</p>
+                    </div>
+                    {active && (
+                      <span className="ml-1 text-[10px] bg-[#496B5A] text-white px-1.5 py-0.5 rounded-full shrink-0">
+                        Selected
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+          </div>
+        )}
       </div>
 
-      {/* Status */}
+      {/* ── Status ───────────────────────────────────────── */}
       <Select
         label="Property Status"
         value={form.status}
@@ -63,7 +93,7 @@ export default function Step6Publish({ form, errors, onChange }) {
         ))}
       </Select>
 
-      {/* is_published + is_featured toggles */}
+      {/* ── Toggles ──────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-4">
         <Toggle
           label="Publish to Website"
@@ -79,22 +109,22 @@ export default function Step6Publish({ form, errors, onChange }) {
         />
       </div>
 
-      {/* Pre-submit summary */}
+      {/* ── Submission summary ────────────────────────────── */}
       <div className="rounded-xl border border-[#DDE5E3] bg-[#F8FAFA] p-4 space-y-3">
         <p className="text-xs font-semibold text-[#496B5A] uppercase tracking-wide">
           Submission Summary
         </p>
         <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs text-[#637079]">
-          <SummaryRow label="Title"        value={form.title        || '—'} />
-          <SummaryRow label="Type"         value={cap(form.property_type) || '—'} />
-          <SummaryRow label="Purpose"      value={cap(form.purpose) || '—'} />
-          <SummaryRow label="Price"        value={form.price ? `${form.currency} ${Number(form.price).toLocaleString()}` : '—'} />
-          <SummaryRow label="Location"     value={[form.city, form.district].filter(Boolean).join(', ') || '—'} />
-          <SummaryRow label="Status"       value={cap(form.status)  || 'draft'} />
-          <SummaryRow label="Published"    value={form.is_published ? 'Yes' : 'No'} />
-          <SummaryRow label="Featured"     value={form.is_featured  ? 'Yes' : 'No'} />
-          <SummaryRow label="Agent"        value={MOCK_AGENTS.find((a) => a.id === form.assigned_agent)?.full_name || 'Unassigned'} />
-          <SummaryRow label="Land area"    value={form.land_area_value ? `${form.land_area_value} ${form.land_area_unit}` : '—'} />
+          <SummaryRow label="Title"     value={form.title || '—'} />
+          <SummaryRow label="Type"      value={cap(form.property_type) || '—'} />
+          <SummaryRow label="Purpose"   value={cap(form.purpose) || '—'} />
+          <SummaryRow label="Price"     value={form.price ? `${form.currency} ${Number(form.price).toLocaleString()}` : '—'} />
+          <SummaryRow label="Location"  value={[form.city, form.district].filter(Boolean).join(', ') || '—'} />
+          <SummaryRow label="Status"    value={cap(form.status) || 'draft'} />
+          <SummaryRow label="Published" value={form.is_published ? 'Yes' : 'No'} />
+          <SummaryRow label="Featured"  value={form.is_featured  ? 'Yes' : 'No'} />
+          <SummaryRow label="Agent"     value={selectedAgent?.full_name || 'Unassigned'} />
+          <SummaryRow label="Land area" value={form.land_area_value ? `${form.land_area_value} ${form.land_area_unit}` : '—'} />
         </div>
       </div>
     </div>

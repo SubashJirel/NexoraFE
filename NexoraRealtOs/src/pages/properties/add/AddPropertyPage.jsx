@@ -84,7 +84,9 @@ function validateStep(step, form) {
 }
 
 // Build the exact payload shape the API expects
-function buildPayload(form, status) {
+function buildPayload(form) {
+  const status = form.status || 'draft'
+
   return {
     title:               form.title.trim(),
     property_type:       form.property_type,
@@ -147,7 +149,7 @@ export default function AddPropertyPage() {
     setStep((s) => Math.max(s - 1, 1))
   }
 
-  function submit(status) {
+  function submit() {
     const e1 = validateStep(1, form)
     const e2 = validateStep(2, form)
     const all = { ...e1, ...e2 }
@@ -156,7 +158,7 @@ export default function AddPropertyPage() {
       setStep(Object.keys(e1).length ? 1 : 2)
       return
     }
-    createProperty({ propertyPayload: buildPayload(form, status), mediaFiles })
+    createProperty({ propertyPayload: buildPayload(form), mediaFiles })
   }
 
   const stepProps = { form, errors, onChange }
@@ -172,10 +174,10 @@ export default function AddPropertyPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Button variant="outlined" size="md" onClick={() => submit('draft')} loading={isPending} disabled={isPending}>
+          <Button variant="outlined" size="md" onClick={submit} loading={isPending} disabled={isPending}>
             Save as Draft
           </Button>
-          <Button variant="primary" size="md" onClick={() => submit('active')} loading={isPending} disabled={isPending}>
+          <Button variant="primary" size="md" onClick={submit} loading={isPending} disabled={isPending}>
             Publish &amp; Save
           </Button>
         </div>
