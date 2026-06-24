@@ -78,7 +78,7 @@ export default function PropertyDetailsPage() {
           <Button variant="outlined" size="md" leftIcon={<Share2 size={15} />}>
             Share
           </Button>
-          <Button variant="primary" size="md">
+          <Button variant="primary" size="md" onClick={() => navigate(`/properties/${id}/edit`)}>
             Edit Property
           </Button>
         </div>

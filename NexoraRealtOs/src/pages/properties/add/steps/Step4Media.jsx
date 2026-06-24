@@ -3,7 +3,7 @@ import { CloudUpload, X, Star } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import Input from '@/components/ui/Input'
 
-export default function Step4Media({ files, onChange, form, onFormChange }) {
+export default function Step4Media({ files, onChange, form, onFormChange, allowMediaUpload = true }) {
   const inputRef = useRef(null)
   const [dragging, setDragging] = useState(false)
 
@@ -34,49 +34,50 @@ export default function Step4Media({ files, onChange, form, onFormChange }) {
   return (
     <div className="space-y-4">
 
-      {/* Drop zone */}
-      <div
-        onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={handleDrop}
-        onClick={() => inputRef.current?.click()}
-        className={cn(
-          'flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed',
-          'p-10 cursor-pointer transition-all duration-150 text-center select-none',
-          dragging
-            ? 'border-[#496B5A] bg-[#eef3f0]'
-            : 'border-[#DDE5E3] bg-[#F8FAFA] hover:border-[#B8C9C5] hover:bg-white'
-        )}
-      >
-        <div className="h-14 w-14 rounded-2xl bg-[#eef3f0] flex items-center justify-center">
-          <CloudUpload size={28} className="text-[#496B5A]" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-[#263238]">
-            Click to upload or drag and drop
-          </p>
-          <p className="mt-1 text-xs text-[#8b969d]">
-            JPG, PNG, WEBP, MP4 — max 10 MB each
-          </p>
-        </div>
-        <button
-          type="button"
-          className="px-5 py-2 rounded-lg bg-white border border-[#DDE5E3] text-sm font-medium text-[#496B5A] hover:bg-[#eef3f0] transition-colors"
+      {allowMediaUpload && (
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={handleDrop}
+          onClick={() => inputRef.current?.click()}
+          className={cn(
+            'flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed',
+            'p-10 cursor-pointer transition-all duration-150 text-center select-none',
+            dragging
+              ? 'border-[#496B5A] bg-[#eef3f0]'
+              : 'border-[#DDE5E3] bg-[#F8FAFA] hover:border-[#B8C9C5] hover:bg-white'
+          )}
         >
-          Select Files
-        </button>
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          accept="image/*,video/*"
-          className="hidden"
-          onChange={(e) => addFiles(e.target.files)}
-        />
-      </div>
+          <div className="h-14 w-14 rounded-2xl bg-[#eef3f0] flex items-center justify-center">
+            <CloudUpload size={28} className="text-[#496B5A]" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-[#263238]">
+              Click to upload or drag and drop
+            </p>
+            <p className="mt-1 text-xs text-[#8b969d]">
+              JPG, PNG, WEBP, MP4 — max 10 MB each
+            </p>
+          </div>
+          <button
+            type="button"
+            className="px-5 py-2 rounded-lg bg-white border border-[#DDE5E3] text-sm font-medium text-[#496B5A] hover:bg-[#eef3f0] transition-colors"
+          >
+            Select Files
+          </button>
+          <input
+            ref={inputRef}
+            type="file"
+            multiple
+            accept="image/*,video/*"
+            className="hidden"
+            onChange={(e) => addFiles(e.target.files)}
+          />
+        </div>
+      )}
 
       {/* Pro tip — only when empty */}
-      {files.length === 0 && (
+      {allowMediaUpload && files.length === 0 && (
         <div className="flex gap-2.5 rounded-xl bg-amber-50 border border-amber-200 p-3.5">
           <span className="text-amber-500 shrink-0 mt-0.5">💡</span>
           <p className="text-xs text-amber-800 leading-relaxed">
@@ -88,7 +89,7 @@ export default function Step4Media({ files, onChange, form, onFormChange }) {
       )}
 
       {/* Preview grid */}
-      {files.length > 0 && (
+      {allowMediaUpload && files.length > 0 && (
         <div>
           <p className="text-xs font-medium text-[#637079] mb-2">
             {files.length} file{files.length > 1 ? 's' : ''} selected

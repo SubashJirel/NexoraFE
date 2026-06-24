@@ -77,6 +77,11 @@ export const router = createBrowserRouter([
         lazy: () => import('@/pages/properties/PropertyDetailsPage').then((m) => ({ Component: m.default })),
       },
       {
+        path: 'properties/:id/edit',
+        handle: { title: 'Edit Property' },
+        lazy: () => import('@/pages/properties/EditPropertyPage').then((m) => ({ Component: m.default })),
+      },
+      {
         path: 'properties/add',
         handle: { title: 'Add Property' },
         lazy: () => import('@/pages/properties/add/AddPropertyPage').then((m) => ({ Component: m.default })),

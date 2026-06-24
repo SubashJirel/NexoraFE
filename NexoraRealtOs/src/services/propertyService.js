@@ -33,6 +33,19 @@ export async function createProperty(payload) {
 }
 
 /**
+ * PUT /api/properties/{propertyId}/
+ * Updates a property and returns the updated record.
+ *
+ * @param {number|string} propertyId
+ * @param {object} payload
+ * @returns {object}
+ */
+export async function updateProperty(propertyId, payload) {
+  const { data } = await apiClient.put(`/properties/${propertyId}/`, payload)
+  return data
+}
+
+/**
  * POST /api/properties/{propertyId}/media/
  * Uploads a single media file for a property.
  *
