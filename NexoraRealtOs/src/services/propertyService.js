@@ -73,6 +73,18 @@ export async function uploadPropertyMedia(propertyId, mediaPayload) {
 }
 
 /**
+ * DELETE /api/properties/media/{mediaId}/
+ * Removes a single media record from a property.
+ *
+ * @param {number|string} mediaId
+ * @returns {object|void}
+ */
+export async function deletePropertyMedia(mediaId) {
+  const { data } = await apiClient.delete(`/properties/media/${mediaId}/`)
+  return data
+}
+
+/**
  * Orchestrates both APIs as a single atomic action:
  *  1. POST /api/properties/          → get propertyId
  *  2. POST /api/properties/{id}/media/ for each file (parallel)

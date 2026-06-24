@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Bath, Bed, Building2, CalendarDays, CheckCircle2, Clock3, Eye, Home, Layers, MapPin, Maximize2, PhoneCall, Share2, SquareAsterisk, Tag } from 'lucide-react'
+import { ArrowLeft, Bath, Bed, Building2, CalendarDays, CheckCircle2, Clock3, Eye, Home, Layers, MapPin, Maximize2, PhoneCall, Share2, SquareAsterisk, Tag, Trash2 } from 'lucide-react'
 import { useProperty } from '@/hooks/useProperties'
+import { useDeletePropertyMedia } from '@/hooks/useDeletePropertyMedia'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import { PageSpinner } from '@/components/ui/Spinner'
@@ -24,6 +25,7 @@ export default function PropertyDetailsPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { data: property, isLoading, isError } = useProperty(id)
+  const { mutate: deleteMedia, isPending: isDeletingMedia } = useDeletePropertyMedia(id)
 
   const primaryMedia = useMemo(() => {
     if (!property?.media?.length) return null
@@ -47,6 +49,12 @@ export default function PropertyDetailsPage() {
   const status = STATUS_CONFIG[property.status] || { label: property.status || 'Unknown', variant: 'neutral' }
   const purpose = PURPOSE_CONFIG[property.purpose] || property.purpose || 'Unknown'
   const imageUrl = primaryMedia?.file || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1200&q=80'
+
+  function handleDeleteMedia(mediaId) {
+    const confirmed = window.confirm('Delete this media item? This cannot be undone.')
+    if (!confirmed) return
+    deleteMedia(mediaId)
+  }
 
   return (
     <div className="space-y-6">
@@ -177,8 +185,21 @@ export default function PropertyDetailsPage() {
             {property.media?.length ? (
               <div className="grid grid-cols-2 gap-3">
                 {property.media.map((mediaItem, index) => (
-                  <div key={mediaItem.id || index} className="overflow-hidden rounded-xl border border-[#DDE5E3] bg-[#F8FAFA]">
+                  <div key={mediaItem.id || index} className="group relative overflow-hidden rounded-xl border border-[#DDE5E3] bg-[#F8FAFA]">
                     <img src={mediaItem.file} alt={mediaItem.title || `${property.title} media ${index + 1}`} className="h-28 w-full object-cover" />
+                    <div className="absolute inset-0 flex items-start justify-end p-2 opacity-0 transition-opacity group-hover:opacity-100">
+                      <Button
+                        type="button"
+                        variant="danger"
+                        size="icon"
+                        className="h-8 w-8 shadow-md"
+                        onClick={() => handleDeleteMedia(mediaItem.id)}
+                        disabled={isDeletingMedia}
+                        aria-label="Delete media"
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
