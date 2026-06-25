@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Users, Building2, Home, PhoneCall,
   CalendarCheck, BarChart3, Handshake, Settings,
-  ChevronLeft, ChevronRight, LogOut, Bell,
+  ChevronLeft, ChevronRight, LogOut, Bell, UserCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useUIStore } from '@/store/uiStore'
@@ -21,6 +21,7 @@ const NAV_ITEMS = [
     items: [
       { label: 'Leads',        to: '/leads',        icon: PhoneCall },
       { label: 'Contacts',     to: '/contacts',     icon: Users },
+      { label: 'Agents',       to: '/agents',       icon: UserCheck },
       { label: 'Site Visits',  to: '/site-visits',  icon: CalendarCheck },
       { label: 'Deals',        to: '/deals',        icon: Handshake },
     ],

@@ -86,6 +86,12 @@ export const router = createBrowserRouter([
         handle: { title: 'Add Property' },
         lazy: () => import('@/pages/properties/add/AddPropertyPage').then((m) => ({ Component: m.default })),
       },
+      // ── Agents ─────────────────────────────────────────────
+      {
+        path: 'agents',
+        handle: { title: 'Agents' },
+        lazy: () => import('@/pages/agents/AgentsPage').then((m) => ({ Component: m.default })),
+      },
       // ── Contacts ───────────────────────────────────────────
       {
         path: 'contacts',

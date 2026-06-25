@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/cn'
 import Avatar from '@/components/ui/Avatar'
 import Badge from '@/components/ui/Badge'
+import { useDeleteProperty } from '@/hooks/useDeleteProperty'
 
 // ── Status config ─────────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -43,6 +44,9 @@ export default function PropertyCard({ property, view = 'grid' }) {
   const [liked, setLiked] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const navigate = useNavigate()
+  const { mutate: deleteProperty, isPending: isDeletingProperty } = useDeleteProperty(property.id, {
+    onSuccess: () => setMenuOpen(false),
+  })
 
   const primaryMedia = property.media?.find((m) => m.is_primary) || property.media?.[0]
   const imageUrl = primaryMedia?.file || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600&q=80'
@@ -101,6 +105,7 @@ export default function PropertyCard({ property, view = 'grid' }) {
           <div className="relative shrink-0">
             <button
               onClick={() => setMenuOpen((v) => !v)}
+              disabled={isDeletingProperty}
               className="h-7 w-7 flex items-center justify-center rounded-lg text-[#8b969d] hover:bg-[#F8FAFA] hover:text-[#263238] transition-colors"
               aria-label="More options"
             >
@@ -110,6 +115,12 @@ export default function PropertyCard({ property, view = 'grid' }) {
               <PropertyMenu
                 onClose={() => setMenuOpen(false)}
                 onViewDetails={() => navigate(`/properties/${property.id}`)}
+                onEdit={() => navigate(`/properties/${property.id}/edit`)}
+                onDelete={() => {
+                  const confirmed = window.confirm(`Delete ${property.title}? This cannot be undone.`)
+                  if (!confirmed) return
+                  deleteProperty()
+                }}
               />
             )}
           </div>
@@ -226,7 +237,7 @@ function PropertyListRow({ property, status, purpose, imageUrl, liked, setLiked 
 }
 
 // ── Context menu ──────────────────────────────────────────────
-function PropertyMenu({ onClose, onViewDetails }) {
+function PropertyMenu({ onClose, onViewDetails, onEdit, onDelete }) {
   return (
     <>
       <div className="fixed inset-0 z-10" onClick={onClose} />
@@ -236,6 +247,8 @@ function PropertyMenu({ onClose, onViewDetails }) {
             key={item}
             onClick={() => {
               if (item === 'View details') onViewDetails?.()
+              if (item === 'Edit') onEdit?.()
+              if (item === 'Delete') onDelete?.()
               onClose()
             }}
             className={cn(

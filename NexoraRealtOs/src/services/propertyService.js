@@ -46,6 +46,18 @@ export async function updateProperty(propertyId, payload) {
 }
 
 /**
+ * DELETE /api/properties/{propertyId}/
+ * Removes a property record.
+ *
+ * @param {number|string} propertyId
+ * @returns {object|void}
+ */
+export async function deleteProperty(propertyId) {
+  const { data } = await apiClient.delete(`/properties/${propertyId}/`)
+  return data
+}
+
+/**
  * POST /api/properties/{propertyId}/media/
  * Uploads a single media file for a property.
  *

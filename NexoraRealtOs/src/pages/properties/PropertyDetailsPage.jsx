@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Bath, Bed, Building2, CalendarDays, CheckCircle2, Clock3, Eye, Home, Layers, MapPin, Maximize2, PhoneCall, Share2, SquareAsterisk, Tag, Trash2 } from 'lucide-react'
+import { ArrowLeft, Bath, Bed, Building2, CalendarDays, CheckCircle2, Clock3, Eye, Home, Layers, MapPin, Maximize2, PhoneCall, Share2, SquareAsterisk, Tag, Trash2, Trash } from 'lucide-react'
 import { useProperty } from '@/hooks/useProperties'
 import { useDeletePropertyMedia } from '@/hooks/useDeletePropertyMedia'
+import { useDeleteProperty } from '@/hooks/useDeleteProperty'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import { PageSpinner } from '@/components/ui/Spinner'
@@ -26,6 +27,9 @@ export default function PropertyDetailsPage() {
   const navigate = useNavigate()
   const { data: property, isLoading, isError } = useProperty(id)
   const { mutate: deleteMedia, isPending: isDeletingMedia } = useDeletePropertyMedia(id)
+  const { mutate: deleteProperty, isPending: isDeletingProperty } = useDeleteProperty(id, {
+    onSuccess: () => navigate('/properties'),
+  })
 
   const primaryMedia = useMemo(() => {
     if (!property?.media?.length) return null
@@ -54,6 +58,12 @@ export default function PropertyDetailsPage() {
     const confirmed = window.confirm('Delete this media item? This cannot be undone.')
     if (!confirmed) return
     deleteMedia(mediaId)
+  }
+
+  function handleDeleteProperty() {
+    const confirmed = window.confirm(`Delete ${property.title}? This cannot be undone.`)
+    if (!confirmed) return
+    deleteProperty()
   }
 
   return (
@@ -85,6 +95,15 @@ export default function PropertyDetailsPage() {
         <div className="flex items-center gap-2 shrink-0">
           <Button variant="outlined" size="md" leftIcon={<Share2 size={15} />}>
             Share
+          </Button>
+          <Button
+            variant="danger"
+            size="md"
+            leftIcon={<Trash size={15} />}
+            onClick={handleDeleteProperty}
+            disabled={isDeletingProperty}
+          >
+            Delete Property
           </Button>
           <Button variant="primary" size="md" onClick={() => navigate(`/properties/${id}/edit`)}>
             Edit Property
