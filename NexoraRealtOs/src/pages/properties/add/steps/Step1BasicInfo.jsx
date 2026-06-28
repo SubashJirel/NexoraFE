@@ -3,12 +3,12 @@ import Select from '@/components/ui/Select'
 import { cn } from '@/lib/cn'
 
 const PROPERTY_TYPES = [
-  { value: 'house',      label: 'House' },
-  { value: 'apartment',  label: 'Apartment' },
-  { value: 'land',       label: 'Land' },
-  { value: 'commercial', label: 'Commercial' },
-  { value: 'villa',      label: 'Villa' },
-  { value: 'office',     label: 'Office' },
+  { value: 'house',        label: 'House' },
+  { value: 'land',         label: 'Land' },
+  { value: 'apartment',    label: 'Apartment' },
+  { value: 'flat',         label: 'Flat' },
+  { value: 'commercial',   label: 'Commercial' },
+  { value: 'office_space', label: 'Office Space' },
 ]
 
 const PURPOSES = ['sale', 'rent', 'lease']

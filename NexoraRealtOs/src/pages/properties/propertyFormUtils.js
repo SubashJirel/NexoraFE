@@ -81,9 +81,9 @@ export function buildPropertyPayload(form) {
     short_description: form.short_description.trim(),
     description: form.description.trim(),
     status,
-    is_published: status === 'active',
+    is_published: status === 'available',
     is_featured: form.is_featured,
-    published_at: status === 'active' ? new Date().toISOString() : null,
+    published_at: status === 'available' ? new Date().toISOString() : null,
     assigned_agent: form.assigned_agent ?? null,
   }
 }

@@ -5,9 +5,13 @@ import { Spinner } from '@/components/ui/index'
 import { useAgents } from '@/hooks/useAgents'
 
 const STATUS_OPTIONS = [
-  { value: 'draft',   label: 'Draft — save without publishing' },
-  { value: 'active',  label: 'Active — visible on website' },
-  { value: 'pending', label: 'Pending — awaiting review' },
+  { value: 'draft',             label: 'Draft — save without publishing' },
+  { value: 'available',         label: 'Available — visible on website' },
+  { value: 'under_negotiation', label: 'Under Negotiation — deal in progress' },
+  { value: 'sold',              label: 'Sold' },
+  { value: 'rented',            label: 'Rented' },
+  { value: 'hidden',            label: 'Hidden — not visible publicly' },
+  { value: 'archived',          label: 'Archived — no longer active' },
 ]
 
 export default function Step6Publish({ form, errors, onChange }) {

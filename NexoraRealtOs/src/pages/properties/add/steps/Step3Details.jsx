@@ -10,8 +10,18 @@ const AMENITY_OPTIONS = [
   'CCTV', 'Internet', 'Lift', 'Swimming Pool',
 ]
 
-const AREA_UNITS      = ['aana', 'ropani', 'sqft', 'sqm', 'dhur', 'bigha', 'kattha']
-const ROAD_UNITS      = ['ft', 'm']
+const AREA_UNITS = [
+  { value: 'aana',   label: 'Aana' },
+  { value: 'ropani', label: 'Ropani' },
+  { value: 'kattha', label: 'Kattha' },
+  { value: 'dhur',   label: 'Dhur' },
+  { value: 'sqft',   label: 'Square Feet' },
+  { value: 'sqm',    label: 'Square Meter' },
+]
+const ROAD_UNITS = [
+  { value: 'ft', label: 'Feet' },
+  { value: 'm',  label: 'Meter' },
+]
 
 function Counter({ label, value, onChange, min = 0, max = 30 }) {
   return (
@@ -60,7 +70,7 @@ function MeasurementField({ label, valueKey, unitKey, valuePlaceholder, units, f
           className="w-28 shrink-0"
         >
           {units.map((u) => (
-            <option key={u} value={u}>{u}</option>
+            <option key={u.value} value={u.value}>{u.label}</option>
           ))}
         </Select>
       </div>
