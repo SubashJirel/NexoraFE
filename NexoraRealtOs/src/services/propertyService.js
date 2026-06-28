@@ -1,6 +1,18 @@
 import apiClient from '@/lib/axios'
 
 /**
+ * GET /api/properties/filter-options/
+ * Returns dynamic dropdown options for property_types, statuses,
+ * locations, and agents — sourced from the current data in the backend.
+ *
+ * @returns {{ property_types, statuses, locations, agents }}
+ */
+export async function getPropertyFilterOptions() {
+  const { data } = await apiClient.get('/properties/filter-options/')
+  return data
+}
+
+/**
  * GET /api/properties/
  */
 export async function getProperties() {

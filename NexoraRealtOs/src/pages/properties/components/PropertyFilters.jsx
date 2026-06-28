@@ -1,43 +1,23 @@
 import { SlidersHorizontal } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { usePropertyFilterOptions } from '@/hooks/usePropertyFilterOptions'
 
-const PROPERTY_TYPES = [
-  { value: '', label: 'All Types' },
-  { value: 'house',      label: 'House' },
-  { value: 'apartment',  label: 'Apartment' },
-  { value: 'land',       label: 'Land' },
-  { value: 'commercial', label: 'Commercial' },
-]
-
-const STATUSES = [
-  { value: '', label: 'All Status' },
-  { value: 'active',  label: 'Active' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'sold',    label: 'Sold' },
-  { value: 'draft',   label: 'Draft' },
-]
-
-const LOCATIONS = [
-  { value: '', label: 'All Areas' },
-  { value: 'Kathmandu',   label: 'Kathmandu' },
-  { value: 'Lalitpur',    label: 'Lalitpur' },
-  { value: 'Bhaktapur',   label: 'Bhaktapur' },
-  { value: 'Pokhara',     label: 'Pokhara' },
-]
-
-const AGENTS = [
-  { value: '', label: 'All Agents' },
-  { value: '1', label: 'Siddharth KC' },
-  { value: '2', label: 'Priya Thapa' },
-  { value: '3', label: 'Aarav Sharma' },
-]
+// Shown while the filter-options API is still loading
+const LOADING_PLACEHOLDER = [{ value: '', label: 'Loading…' }]
 
 export default function PropertyFilters({ filters, onChange }) {
+  const { data: options, isLoading } = usePropertyFilterOptions()
+
   function set(key, value) {
     onChange({ ...filters, [key]: value })
   }
 
   const hasActive = Object.values(filters).some(Boolean)
+
+  const propertyTypes = isLoading ? LOADING_PLACEHOLDER : (options?.propertyTypes ?? [])
+  const statuses      = isLoading ? LOADING_PLACEHOLDER : (options?.statuses      ?? [])
+  const locations     = isLoading ? LOADING_PLACEHOLDER : (options?.locations     ?? [])
+  const agents        = isLoading ? LOADING_PLACEHOLDER : (options?.agents        ?? [])
 
   return (
     <div className="bg-white border border-[#DDE5E3] rounded-xl p-4">
@@ -46,29 +26,33 @@ export default function PropertyFilters({ filters, onChange }) {
         <FilterSelect
           label="Property Type"
           value={filters.property_type}
-          options={PROPERTY_TYPES}
+          options={propertyTypes}
           onChange={(v) => set('property_type', v)}
+          disabled={isLoading}
         />
 
         <FilterSelect
           label="Status"
           value={filters.status}
-          options={STATUSES}
+          options={statuses}
           onChange={(v) => set('status', v)}
+          disabled={isLoading}
         />
 
         <FilterSelect
           label="Location"
           value={filters.district}
-          options={LOCATIONS}
+          options={locations}
           onChange={(v) => set('district', v)}
+          disabled={isLoading}
         />
 
         <FilterSelect
           label="Assigned Agent"
           value={filters.assigned_agent}
-          options={AGENTS}
+          options={agents}
           onChange={(v) => set('assigned_agent', v)}
+          disabled={isLoading}
         />
 
         {/* Advanced filter button */}
@@ -98,7 +82,7 @@ export default function PropertyFilters({ filters, onChange }) {
   )
 }
 
-function FilterSelect({ label, value, options, onChange }) {
+function FilterSelect({ label, value, options, onChange, disabled }) {
   return (
     <div className="flex flex-col gap-1 min-w-[140px]">
       <label className="text-[10px] font-semibold text-[#8b969d] uppercase tracking-wide px-1">
@@ -107,11 +91,13 @@ function FilterSelect({ label, value, options, onChange }) {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
         className={cn(
           'h-9 rounded-lg border bg-white px-3 pr-8 text-sm text-[#263238]',
           'focus:outline-none focus:ring-2 focus:ring-[#496B5A]/30 focus:border-[#496B5A]',
           'transition-colors duration-150 cursor-pointer appearance-none',
           'bg-[right_0.5rem_center] bg-no-repeat',
+          'disabled:opacity-50 disabled:cursor-not-allowed',
           value ? 'border-[#496B5A] text-[#496B5A] font-medium' : 'border-[#DDE5E3] hover:border-[#B8C9C5]'
         )}
         style={{

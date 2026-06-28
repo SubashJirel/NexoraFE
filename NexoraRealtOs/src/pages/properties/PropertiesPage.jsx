@@ -29,7 +29,7 @@ export default function PropertiesPage() {
       if (filters.property_type && p.property_type !== filters.property_type) return false
       if (filters.status       && p.status !== filters.status)               return false
       if (filters.district     && p.district !== filters.district)           return false
-      if (filters.assigned_agent && String(p.assigned_agent?.id) !== filters.assigned_agent) return false
+      if (filters.assigned_agent && String(p.assigned_agent?.id ?? p.assigned_agent) !== String(filters.assigned_agent)) return false
       if (search) {
         const q = search.toLowerCase()
         const haystack = `${p.title} ${p.city} ${p.district} ${p.address} ${p.id}`.toLowerCase()
@@ -41,10 +41,10 @@ export default function PropertiesPage() {
 
   // ── Stats strip ───────────────────────────────────────────────────
   const stats = useMemo(() => ({
-    total:   properties.length,
-    active:  properties.filter((p) => p.status === 'active').length,
-    sold:    properties.filter((p) => p.status === 'sold').length,
-    pending: properties.filter((p) => p.status === 'pending').length,
+    total:            properties.length,
+    available:        properties.filter((p) => p.status === 'available').length,
+    sold:             properties.filter((p) => p.status === 'sold').length,
+    under_negotiation: properties.filter((p) => p.status === 'under_negotiation').length,
   }), [properties])
 
   return (
@@ -92,10 +92,10 @@ export default function PropertiesPage() {
       {/* ── Stats strip ─────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Total Listings', value: stats.total,   color: 'text-[#263238]' },
-          { label: 'Active',         value: stats.active,  color: 'text-green-600' },
-          { label: 'Pending',        value: stats.pending, color: 'text-amber-600' },
-          { label: 'Sold',           value: stats.sold,    color: 'text-red-500'   },
+          { label: 'Total Listings',    value: stats.total,             color: 'text-[#263238]' },
+          { label: 'Available',         value: stats.available,         color: 'text-green-600' },
+          { label: 'Under Negotiation', value: stats.under_negotiation, color: 'text-amber-600' },
+          { label: 'Sold',              value: stats.sold,              color: 'text-red-500'   },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-xl border border-[#DDE5E3] px-4 py-3 flex items-center justify-between">
             <span className="text-xs text-[#637079] font-medium">{s.label}</span>
