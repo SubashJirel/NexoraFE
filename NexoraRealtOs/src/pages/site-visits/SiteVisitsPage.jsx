@@ -1,12 +1,15 @@
 import { useState, useMemo } from 'react'
 import {
   Search, CalendarCheck, MapPin, User, Building2,
-  Calendar, Clock, SlidersHorizontal, X,
+  Calendar, Clock, SlidersHorizontal, X, Plus,
 } from 'lucide-react'
-import { useSiteVisits } from '@/hooks/useSiteVisits'
+import { useSiteVisits, useCreateSiteVisit } from '@/hooks/useSiteVisits'
 import { useAgents } from '@/hooks/useAgents'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
+import Select from '@/components/ui/Select'
+import Textarea from '@/components/ui/Textarea'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { cn } from '@/lib/cn'
 import {
@@ -25,6 +28,7 @@ export default function SiteVisitsPage() {
   const [search,  setSearch]  = useState('')
   const [filters, setFilters] = useState(EMPTY_FILTERS)
   const [showFilters, setShowFilters] = useState(false)
+  const [scheduleOpen, setScheduleOpen] = useState(false)
 
   // Build server-side query params — search + filters all go to the API
   const queryParams = useMemo(() => ({
@@ -67,6 +71,14 @@ export default function SiteVisitsPage() {
             Track and manage property site visits for your leads
           </p>
         </div>
+        <Button
+          variant="primary"
+          size="md"
+          leftIcon={<Plus size={15} />}
+          onClick={() => setScheduleOpen(true)}
+        >
+          Schedule Visit
+        </Button>
       </div>
 
       {/* ── Stats strip ─────────────────────────────────── */}
@@ -215,6 +227,11 @@ export default function SiteVisitsPage() {
         <EmptyState hasFilters={Boolean(hasActiveFilters)} onClear={clearAll} />
       ) : (
         <SiteVisitsTable visits={visits} />
+      )}
+
+      {/* ── Modal ────────────────────────────────────────── */}
+      {scheduleOpen && (
+        <ScheduleVisitModal onClose={() => setScheduleOpen(false)} />
       )}
     </div>
   )
@@ -466,6 +483,196 @@ function ErrorState() {
       <p className="text-base font-semibold text-[#263238]">Failed to load site visits</p>
       <p className="text-sm text-[#637079]">Check your connection and try again.</p>
       <Button variant="outlined" size="sm" onClick={() => window.location.reload()}>Retry</Button>
+    </div>
+  )
+}
+
+// ── Schedule Visit Modal ──────────────────────────────────────
+const EMPTY_FORM = {
+  lead:            '',
+  property:        '',
+  assigned_agent:  '',
+  scheduled_at:    '',
+  status:          'scheduled',
+  notes:           '',
+}
+
+function ScheduleVisitModal({ onClose }) {
+  const { data: agents = [] } = useAgents()
+  const [form, setForm]     = useState(EMPTY_FORM)
+  const [errors, setErrors] = useState({})
+
+  const createMutation = useCreateSiteVisit({ onSuccess: onClose })
+
+  function set(field, value) {
+    setForm((p) => ({ ...p, [field]: value }))
+    if (errors[field]) setErrors((p) => ({ ...p, [field]: undefined }))
+  }
+
+  function validate() {
+    const e = {}
+    if (!form.lead.toString().trim())         e.lead         = 'Lead ID is required.'
+    if (!form.property.toString().trim())     e.property     = 'Property ID is required.'
+    if (!form.scheduled_at)                   e.scheduled_at = 'Scheduled date & time is required.'
+    return e
+  }
+
+  function handleSubmit(ev) {
+    ev.preventDefault()
+    const e = validate()
+    if (Object.keys(e).length) { setErrors(e); return }
+
+    createMutation.mutate({
+      lead:           Number(form.lead),
+      property:       Number(form.property),
+      assigned_agent: form.assigned_agent ? Number(form.assigned_agent) : null,
+      // Convert local datetime-local value to ISO string
+      scheduled_at:   new Date(form.scheduled_at).toISOString(),
+      status:         form.status,
+      notes:          form.notes || null,
+    })
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[300] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 flex flex-col max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="schedule-visit-title"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#DDE5E3] shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-lg bg-[#eef3f0] flex items-center justify-center">
+              <CalendarCheck size={16} className="text-[#496B5A]" />
+            </div>
+            <h2 id="schedule-visit-title" className="text-base font-semibold text-[#263238]">
+              Schedule Site Visit
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="h-8 w-8 flex items-center justify-center rounded-lg text-[#637079] hover:bg-[#F8FAFA] transition-colors"
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} noValidate className="overflow-y-auto flex-1">
+          <div className="px-6 py-5 space-y-5">
+
+            {/* Visit details */}
+            <FormSection title="Visit Details">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="Lead ID *"
+                  type="number"
+                  placeholder="e.g. 12"
+                  value={form.lead}
+                  onChange={(e) => set('lead', e.target.value)}
+                  error={errors.lead}
+                  disabled={createMutation.isPending}
+                  autoFocus
+                />
+                <Input
+                  label="Property ID *"
+                  type="number"
+                  placeholder="e.g. 5"
+                  value={form.property}
+                  onChange={(e) => set('property', e.target.value)}
+                  error={errors.property}
+                  disabled={createMutation.isPending}
+                />
+                <div className="sm:col-span-2">
+                  <Input
+                    label="Scheduled At *"
+                    type="datetime-local"
+                    value={form.scheduled_at}
+                    onChange={(e) => set('scheduled_at', e.target.value)}
+                    error={errors.scheduled_at}
+                    disabled={createMutation.isPending}
+                  />
+                </div>
+              </div>
+            </FormSection>
+
+            {/* Assignment & status */}
+            <FormSection title="Assignment">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Select
+                  label="Assigned Agent"
+                  value={form.assigned_agent}
+                  onChange={(e) => set('assigned_agent', e.target.value)}
+                  disabled={createMutation.isPending}
+                >
+                  <option value="">— Unassigned —</option>
+                  {agents.map((a) => (
+                    <option key={a.id} value={a.id}>{a.full_name}</option>
+                  ))}
+                </Select>
+                <Select
+                  label="Status"
+                  value={form.status}
+                  onChange={(e) => set('status', e.target.value)}
+                  disabled={createMutation.isPending}
+                >
+                  {SITE_VISIT_STATUSES.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </Select>
+              </div>
+            </FormSection>
+
+            {/* Notes */}
+            <FormSection title="Notes">
+              <Textarea
+                placeholder="Any special instructions or notes for this visit…"
+                rows={3}
+                value={form.notes}
+                onChange={(e) => set('notes', e.target.value)}
+                disabled={createMutation.isPending}
+              />
+            </FormSection>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 px-6 pb-5 shrink-0">
+            <Button
+              variant="outlined"
+              size="md"
+              type="button"
+              onClick={onClose}
+              disabled={createMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              type="submit"
+              loading={createMutation.isPending}
+            >
+              Schedule Visit
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function FormSection({ title, children }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-[#8b969d] uppercase tracking-wider mb-3">{title}</p>
+      {children}
     </div>
   )
 }
