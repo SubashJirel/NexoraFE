@@ -5,11 +5,15 @@ export const PROPERTIES_KEY = ['properties']
 
 export const PROPERTY_KEY = (id) => ['properties', id]
 
-export function useProperties() {
+/**
+ * @param {object} [filters] - { property_type, status, location, assigned_agent, search }
+ * Filters are included in the query key so React Query re-fetches
+ * automatically whenever any filter value changes.
+ */
+export function useProperties(filters = {}) {
   return useQuery({
-    queryKey: PROPERTIES_KEY,
-    queryFn: getProperties,
-    // Fall back to mock data while backend has no real listings yet
+    queryKey: [...PROPERTIES_KEY, filters],
+    queryFn:  () => getProperties(filters),
     placeholderData: MOCK_PROPERTIES,
   })
 }

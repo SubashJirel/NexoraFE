@@ -9,43 +9,37 @@ import { PageSpinner } from '@/components/ui/Spinner'
 import { cn } from '@/lib/cn'
 
 const EMPTY_FILTERS = {
-  property_type: '',
-  status: '',
-  district: '',
+  property_type:  '',
+  status:         '',
+  location:       '',
   assigned_agent: '',
 }
 
 export default function PropertiesPage() {
-  const { data: properties = [], isLoading, isError } = useProperties()
   const navigate = useNavigate()
 
-  const [view, setView] = useState('grid')          // 'grid' | 'list'
+  const [view, setView]     = useState('grid')
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState(EMPTY_FILTERS)
 
-  // ── Client-side filtering (will be replaced by API query params) ──
-  const filtered = useMemo(() => {
-    return properties.filter((p) => {
-      if (filters.property_type && p.property_type !== filters.property_type) return false
-      if (filters.status       && p.status !== filters.status)               return false
-      if (filters.district     && p.district !== filters.district)           return false
-      if (filters.assigned_agent && String(p.assigned_agent?.id ?? p.assigned_agent) !== String(filters.assigned_agent)) return false
-      if (search) {
-        const q = search.toLowerCase()
-        const haystack = `${p.title} ${p.city} ${p.district} ${p.address} ${p.id}`.toLowerCase()
-        if (!haystack.includes(q)) return false
-      }
-      return true
-    })
-  }, [properties, filters, search])
+  // Build the params object that goes to the API.
+  // search maps to the backend's `search` param.
+  const queryParams = {
+    ...filters,
+    ...(search.trim() ? { search: search.trim() } : {}),
+  }
+
+  const { data: properties = [], isLoading, isError } = useProperties(queryParams)
 
   // ── Stats strip ───────────────────────────────────────────────────
+  // Counts are derived from the unfiltered total; fetch without params.
+  const { data: allProperties = [] } = useProperties({})
   const stats = useMemo(() => ({
-    total:            properties.length,
-    available:        properties.filter((p) => p.status === 'available').length,
-    sold:             properties.filter((p) => p.status === 'sold').length,
-    under_negotiation: properties.filter((p) => p.status === 'under_negotiation').length,
-  }), [properties])
+    total:             allProperties.length,
+    available:         allProperties.filter((p) => p.status === 'available').length,
+    under_negotiation: allProperties.filter((p) => p.status === 'under_negotiation').length,
+    sold:              allProperties.filter((p) => p.status === 'sold').length,
+  }), [allProperties])
 
   return (
     <div className="space-y-6">
@@ -129,23 +123,23 @@ export default function PropertiesPage() {
         <PageSpinner />
       ) : isError ? (
         <ErrorState />
-      ) : filtered.length === 0 ? (
+      ) : properties.length === 0 ? (
         <EmptyState onClear={() => { setSearch(''); setFilters(EMPTY_FILTERS) }} />
       ) : (
         <>
           <p className="text-xs text-[#8b969d]">
-            Showing <span className="font-semibold text-[#263238]">{filtered.length}</span> of {properties.length} properties
+            Showing <span className="font-semibold text-[#263238]">{properties.length}</span> properties
           </p>
 
           {view === 'grid' ? (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {filtered.map((p) => (
+              {properties.map((p) => (
                 <PropertyCard key={p.id} property={p} view="grid" />
               ))}
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {filtered.map((p) => (
+              {properties.map((p) => (
                 <PropertyCard key={p.id} property={p} view="list" />
               ))}
             </div>

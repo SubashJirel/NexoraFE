@@ -41,9 +41,9 @@ export default function PropertyFilters({ filters, onChange }) {
 
         <FilterSelect
           label="Location"
-          value={filters.district}
+          value={filters.location}
           options={locations}
-          onChange={(v) => set('district', v)}
+          onChange={(v) => set('location', v)}
           disabled={isLoading}
         />
 
@@ -71,7 +71,7 @@ export default function PropertyFilters({ filters, onChange }) {
 
         {hasActive && (
           <button
-            onClick={() => onChange({ property_type: '', status: '', district: '', assigned_agent: '' })}
+            onClick={() => onChange({ property_type: '', status: '', location: '', assigned_agent: '' })}
             className="text-xs text-[#637079] hover:text-[#496B5A] underline underline-offset-2 transition-colors"
           >
             Clear filters

@@ -14,9 +14,17 @@ export async function getPropertyFilterOptions() {
 
 /**
  * GET /api/properties/
+ * Accepts optional filter params: property_type, status, location, assigned_agent, search
+ * Empty/falsy values are stripped before sending.
+ *
+ * @param {object} [params]
  */
-export async function getProperties() {
-  const { data } = await apiClient.get('/properties/')
+export async function getProperties(params = {}) {
+  // Strip empty values so they don't appear as blank query params
+  const clean = Object.fromEntries(
+    Object.entries(params).filter(([, v]) => v !== '' && v !== null && v !== undefined)
+  )
+  const { data } = await apiClient.get('/properties/', { params: clean })
   return data
 }
 
