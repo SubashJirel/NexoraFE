@@ -2,8 +2,9 @@ import { useState, useMemo } from 'react'
 import {
   Search, CalendarCheck, MapPin, User, Building2,
   Calendar, Clock, SlidersHorizontal, X, Plus,
+  Phone, FileText, ChevronRight,
 } from 'lucide-react'
-import { useSiteVisits, useCreateSiteVisit } from '@/hooks/useSiteVisits'
+import { useSiteVisits, useCreateSiteVisit, useSiteVisit } from '@/hooks/useSiteVisits'
 import { useAgents } from '@/hooks/useAgents'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
@@ -29,6 +30,7 @@ export default function SiteVisitsPage() {
   const [filters, setFilters] = useState(EMPTY_FILTERS)
   const [showFilters, setShowFilters] = useState(false)
   const [scheduleOpen, setScheduleOpen] = useState(false)
+  const [drawerVisitId, setDrawerVisitId] = useState(null)
 
   // Build server-side query params — search + filters all go to the API
   const queryParams = useMemo(() => ({
@@ -226,19 +228,27 @@ export default function SiteVisitsPage() {
       ) : visits.length === 0 ? (
         <EmptyState hasFilters={Boolean(hasActiveFilters)} onClear={clearAll} />
       ) : (
-        <SiteVisitsTable visits={visits} />
+        <SiteVisitsTable visits={visits} onRowClick={(v) => setDrawerVisitId(v.id)} />
       )}
 
       {/* ── Modal ────────────────────────────────────────── */}
       {scheduleOpen && (
         <ScheduleVisitModal onClose={() => setScheduleOpen(false)} />
       )}
+
+      {/* ── Detail drawer ────────────────────────────────── */}
+      {drawerVisitId && (
+        <SiteVisitDrawer
+          visitId={drawerVisitId}
+          onClose={() => setDrawerVisitId(null)}
+        />
+      )}
     </div>
   )
 }
 
 // ── Table ─────────────────────────────────────────────────────
-function SiteVisitsTable({ visits }) {
+function SiteVisitsTable({ visits, onRowClick }) {
   return (
     <div className="bg-white rounded-2xl border border-[#DDE5E3] overflow-hidden">
       {/* Desktop table */}
@@ -255,12 +265,11 @@ function SiteVisitsTable({ visits }) {
             </tr>
           </thead>
           <tbody>
-            {visits.map((visit, i) => (
+            {visits.map((visit) => (
               <tr
                 key={visit.id}
-                className={cn(
-                  'border-b border-[#DDE5E3] last:border-0 transition-colors hover:bg-[#F8FAFA]',
-                )}
+                onClick={() => onRowClick(visit)}
+                className="border-b border-[#DDE5E3] last:border-0 transition-colors hover:bg-[#F8FAFA] cursor-pointer"
               >
                 {/* Lead */}
                 <td className="px-4 py-3">
@@ -347,7 +356,7 @@ function SiteVisitsTable({ visits }) {
       {/* Mobile card list */}
       <div className="md:hidden divide-y divide-[#DDE5E3]">
         {visits.map((visit) => (
-          <SiteVisitCard key={visit.id} visit={visit} />
+          <SiteVisitCard key={visit.id} visit={visit} onClick={() => onRowClick(visit)} />
         ))}
       </div>
     </div>
@@ -363,9 +372,12 @@ function Th({ children }) {
 }
 
 // ── Mobile card ───────────────────────────────────────────────
-function SiteVisitCard({ visit }) {
+function SiteVisitCard({ visit, onClick }) {
   return (
-    <div className="p-4 space-y-3">
+    <button
+      onClick={onClick}
+      className="w-full text-left p-4 space-y-3 hover:bg-[#F8FAFA] transition-colors"
+    >
       {/* Header row */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -408,7 +420,7 @@ function SiteVisitCard({ visit }) {
           {visit.notes}
         </p>
       )}
-    </div>
+    </button>
   )
 }
 
@@ -673,6 +685,175 @@ function FormSection({ title, children }) {
     <div>
       <p className="text-xs font-semibold text-[#8b969d] uppercase tracking-wider mb-3">{title}</p>
       {children}
+    </div>
+  )
+}
+
+// ── Site Visit Drawer ─────────────────────────────────────────
+function SiteVisitDrawer({ visitId, onClose }) {
+  const { data: visit, isLoading, isError } = useSiteVisit(visitId)
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-[250] bg-black/30"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* Panel */}
+      <div
+        className="fixed right-0 top-0 z-[260] h-screen w-full max-w-md bg-white shadow-2xl flex flex-col"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Site visit details"
+      >
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#DDE5E3] shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-lg bg-[#eef3f0] flex items-center justify-center shrink-0">
+              <CalendarCheck size={15} className="text-[#496B5A]" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-[#263238]">Site Visit Details</p>
+              {visit && (
+                <p className="text-[11px] text-[#8b969d]">Visit #{visit.id}</p>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="h-8 w-8 flex items-center justify-center rounded-lg text-[#637079] hover:bg-[#F8FAFA] transition-colors"
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* ── Content ── */}
+        <div className="flex-1 overflow-y-auto">
+          {isLoading && (
+            <div className="flex items-center justify-center h-full">
+              <div className="h-6 w-6 rounded-full border-2 border-[#496B5A] border-t-transparent animate-spin" />
+            </div>
+          )}
+
+          {isError && (
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-6">
+              <p className="text-sm font-semibold text-[#263238]">Failed to load visit</p>
+              <p className="text-xs text-[#637079]">Check your connection and try again.</p>
+            </div>
+          )}
+
+          {visit && (
+            <div className="p-5 space-y-6">
+
+              {/* Status banner */}
+              <div className="flex items-center justify-between bg-[#F8FAFA] rounded-xl border border-[#DDE5E3] px-4 py-3">
+                <span className="text-xs font-semibold text-[#8b969d] uppercase tracking-wider">Status</span>
+                <StatusBadge status={visit.status} />
+              </div>
+
+              {/* Lead */}
+              <DrawerSection title="Lead">
+                <DrawerRow icon={User} label="Name"    value={visit.lead_name     || `Lead #${visit.lead}`} />
+                <DrawerRow icon={FileText} label="Lead ID" value={`#${visit.lead}`} />
+                {visit.created_by_name && (
+                  <DrawerRow icon={User} label="Created by" value={visit.created_by_name} />
+                )}
+              </DrawerSection>
+
+              {/* Property */}
+              <DrawerSection title="Property">
+                <DrawerRow icon={Building2} label="Title"    value={visit.property_title    || `Property #${visit.property}`} />
+                <DrawerRow icon={MapPin}    label="Location" value={visit.property_location || '—'} />
+                <DrawerRow icon={FileText}  label="Property ID" value={`#${visit.property}`} />
+              </DrawerSection>
+
+              {/* Schedule */}
+              <DrawerSection title="Schedule">
+                <DrawerRow
+                  icon={Calendar}
+                  label="Date"
+                  value={formatDate(visit.scheduled_at)}
+                />
+                <DrawerRow
+                  icon={Clock}
+                  label="Time"
+                  value={
+                    visit.scheduled_at
+                      ? new Date(visit.scheduled_at).toLocaleTimeString('en-IN', {
+                          hour: '2-digit', minute: '2-digit',
+                        })
+                      : '—'
+                  }
+                />
+                <DrawerRow icon={User} label="Agent" value={visit.assigned_agent_name || 'Unassigned'} />
+              </DrawerSection>
+
+              {/* Notes */}
+              {visit.notes && (
+                <DrawerSection title="Notes">
+                  <p className="text-sm text-[#637079] leading-relaxed whitespace-pre-line">
+                    {visit.notes}
+                  </p>
+                </DrawerSection>
+              )}
+
+              {/* Meta */}
+              <DrawerSection title="Meta">
+                <DrawerRow
+                  icon={Calendar}
+                  label="Created"
+                  value={formatScheduledAt(visit.created_at)}
+                />
+                <DrawerRow
+                  icon={Calendar}
+                  label="Updated"
+                  value={formatScheduledAt(visit.updated_at)}
+                />
+                {visit.scheduled_email_sent_at && (
+                  <DrawerRow
+                    icon={Phone}
+                    label="Email sent"
+                    value={formatScheduledAt(visit.scheduled_email_sent_at)}
+                  />
+                )}
+                {visit.scheduled_email_error && (
+                  <DrawerRow
+                    icon={Phone}
+                    label="Email error"
+                    value={visit.scheduled_email_error}
+                    valueClassName="text-red-500"
+                  />
+                )}
+              </DrawerSection>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
+function DrawerSection({ title, children }) {
+  return (
+    <div>
+      <p className="text-[10px] font-semibold text-[#8b969d] uppercase tracking-wider mb-2.5">{title}</p>
+      <div className="space-y-2">{children}</div>
+    </div>
+  )
+}
+
+function DrawerRow({ icon: Icon, label, value, valueClassName }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="h-7 w-7 rounded-lg bg-[#F8FAFA] border border-[#DDE5E3] flex items-center justify-center shrink-0">
+        <Icon size={13} className="text-[#637079]" />
+      </div>
+      <span className="text-xs text-[#8b969d] w-20 shrink-0">{label}</span>
+      <span className={cn('text-sm text-[#263238] font-medium', valueClassName)}>{value}</span>
     </div>
   )
 }

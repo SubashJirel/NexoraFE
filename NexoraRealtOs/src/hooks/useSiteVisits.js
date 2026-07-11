@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSiteVisits, createSiteVisit } from '@/services/siteVisitService'
+import { getSiteVisits, getSiteVisit, createSiteVisit } from '@/services/siteVisitService'
 import toast from 'react-hot-toast'
 
-export const SITE_VISITS_KEY = ['site-visits']
+export const SITE_VISITS_KEY    = ['site-visits']
+export const SITE_VISIT_KEY = (id) => ['site-visits', id]
 
 /**
  * Fetches site visits, optionally filtered.
@@ -17,6 +18,20 @@ export function useSiteVisits(filters = {}) {
     queryKey: [...SITE_VISITS_KEY, filters],
     queryFn:  () => getSiteVisits(filters),
     staleTime: 1000 * 60 * 2, // 2 min
+  })
+}
+
+/**
+ * Fetches a single site visit by ID.
+ *
+ * @param {number|string} id
+ */
+export function useSiteVisit(id) {
+  return useQuery({
+    queryKey: SITE_VISIT_KEY(id),
+    queryFn:  () => getSiteVisit(id),
+    enabled:  Boolean(id),
+    staleTime: 1000 * 60 * 2,
   })
 }
 

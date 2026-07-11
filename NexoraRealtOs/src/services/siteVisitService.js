@@ -18,7 +18,18 @@ export async function getSiteVisits(params = {}) {
 }
 
 /**
- * POST /api/site-visits/
+ * GET /api/site-visits/{id}/
+ * Fetches a single site visit with full details.
+ *
+ * @param {number|string} id
+ * @returns {object} site visit
+ */
+export async function getSiteVisit(id) {
+  const { data } = await apiClient.get(`/site-visits/${id}/`)
+  return data
+}
+
+/**
  * Creates a new site visit and returns the full created object.
  *
  * @param {object} payload
