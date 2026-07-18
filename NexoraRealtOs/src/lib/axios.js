@@ -1,7 +1,8 @@
 import axios from 'axios'
 import { useAuthStore } from '@/store/authStore'
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+const BASE_URL = import.meta.env.VITE_API_BASE_URL
+console.log('BASE_URL',BASE_URL)
 const REFRESH_URL = '/auth/token/refresh/'
 
 export const apiClient = axios.create({
