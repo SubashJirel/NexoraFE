@@ -122,6 +122,12 @@ export const router = createBrowserRouter([
         handle: { title: 'Agencies' },
         lazy: () => import('@/pages/agencies/AgenciesPage').then((m) => ({ Component: m.default })),
       },
+      // ── Social Media ────────────────────────────────────────
+      {
+        path: 'social-media',
+        handle: { title: 'Social Media' },
+        lazy: () => import('@/pages/social-media/SocialMediaPage').then((m) => ({ Component: m.default })),
+      },
       // ── Settings ───────────────────────────────────────────
       {
         path: 'settings',

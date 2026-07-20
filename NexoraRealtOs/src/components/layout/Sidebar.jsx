@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Users, Building2, Home, PhoneCall,
   CalendarCheck, BarChart3, Handshake, Settings,
-  ChevronLeft, ChevronRight, LogOut, Bell, UserCheck,
+  ChevronLeft, ChevronRight, LogOut, Bell, UserCheck, Share2,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useUIStore } from '@/store/uiStore'
@@ -37,6 +37,12 @@ const NAV_ITEMS = [
     group: 'Reports',
     items: [
       { label: 'Analytics',    to: '/analytics',    icon: BarChart3 },
+    ],
+  },
+  {
+    group: 'Marketing',
+    items: [
+      { label: 'Social Media', to: '/social-media', icon: Share2 },
     ],
   },
 ]
