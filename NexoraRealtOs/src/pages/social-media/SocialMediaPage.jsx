@@ -2,14 +2,14 @@ import { useState } from 'react'
 import {
   Link2, Link2Off, AlertCircle, Share2,
   CheckCircle2, RefreshCw, PenSquare,
-  ImageIcon, Clock, FileEdit,
+  ImageIcon, Clock, FileEdit, Send,
 } from 'lucide-react'
 import {
   useSocialConnections,
   useStartMetaConnection,
   useDisconnectSocialAccount,
 } from '@/hooks/useSocialConnections'
-import { useSocialPosts } from '@/hooks/useCreateSocialPost'
+import { useSocialPosts, usePublishSocialPost } from '@/hooks/useCreateSocialPost'
 import { Card, CardBody } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import { PageSpinner } from '@/components/ui/Spinner'
@@ -224,6 +224,84 @@ function HowItWorks() {
   )
 }
 
+// ── Publish confirmation modal ────────────────────────────────
+
+function PublishModal({ post, onConfirm, onCancel, isLoading }) {
+  // Derive available platforms from the post's platform field.
+  // The API accepts an array; we pre-select the post's own platform.
+  const available = post?.platform ? [post.platform] : []
+  const [selected, setSelected] = useState(available)
+
+  function toggle(p) {
+    setSelected((prev) =>
+      prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl mx-4">
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#eef3f0]">
+          <Send size={20} className="text-[#496B5A]" />
+        </div>
+        <h3 className="text-lg font-bold text-[#263238]">Publish Post</h3>
+        <p className="mt-2 text-sm text-[#637079]">
+          Select the platforms to publish to. This will post immediately.
+        </p>
+
+        {/* caption preview */}
+        {post?.caption && (
+          <p className="mt-3 rounded-lg border border-[#DDE5E3] bg-[#F8FAFA] px-3 py-2 text-xs text-[#637079] line-clamp-3 leading-relaxed">
+            {post.caption}
+          </p>
+        )}
+
+        {/* platform toggles */}
+        <div className="mt-4 flex flex-wrap gap-2">
+          {available.map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => toggle(p)}
+              className={cn(
+                'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold capitalize transition-colors',
+                selected.includes(p)
+                  ? 'border-[#496B5A] bg-[#eef3f0] text-[#496B5A]'
+                  : 'border-[#DDE5E3] bg-white text-[#637079] hover:border-[#B8C9C5]'
+              )}
+            >
+              <span
+                className={cn(
+                  'h-2 w-2 rounded-full',
+                  selected.includes(p) ? 'bg-[#496B5A]' : 'bg-[#DDE5E3]'
+                )}
+              />
+              {p}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-6 flex gap-3">
+          <Button variant="ghost" size="md" className="flex-1" onClick={onCancel} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            size="md"
+            className="flex-1"
+            loading={isLoading}
+            disabled={selected.length === 0}
+            onClick={() => onConfirm(selected)}
+          >
+            Publish Now
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Posts list ────────────────────────────────────────────────
 
 const STATUS_STYLES = {
@@ -233,15 +311,16 @@ const STATUS_STYLES = {
   failed:    'bg-red-50 text-red-600',
 }
 
-function PostCard({ post }) {
+function PostCard({ post, onPublish, isPublishing }) {
   const statusLabel = post.status?.charAt(0).toUpperCase() + post.status?.slice(1)
+  const canPublish = post.status === 'draft' || post.status === 'failed'
 
   return (
     <Card padding="none" className="overflow-hidden">
-      <div className="flex gap-0">
+      <div className="flex">
         {/* image thumbnail */}
         {post.image ? (
-          <div className="shrink-0 w-20 h-20 sm:w-24 sm:h-24">
+          <div className="shrink-0 w-20 h-auto sm:w-24">
             <img src={post.image} alt="" className="w-full h-full object-cover" />
           </div>
         ) : (
@@ -264,25 +343,58 @@ function PostCard({ post }) {
             </span>
           </div>
 
-          <div className="flex items-center gap-3 text-[11px] text-[#8b969d] flex-wrap">
-            <span className="capitalize font-medium text-[#637079]">{post.platform}</span>
-            {post.created_by_name && <span>by {post.created_by_name}</span>}
-            <span>{new Date(post.created_at).toLocaleDateString()}</span>
-            {post.scheduled_at && (
-              <span className="flex items-center gap-1 text-amber-600">
-                <Clock size={11} />
-                {new Date(post.scheduled_at).toLocaleString()}
-              </span>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-3 text-[11px] text-[#8b969d] flex-wrap">
+              <span className="capitalize font-medium text-[#637079]">{post.platform}</span>
+              {post.created_by_name && <span>by {post.created_by_name}</span>}
+              <span>{new Date(post.created_at).toLocaleDateString()}</span>
+              {post.scheduled_at && (
+                <span className="flex items-center gap-1 text-amber-600">
+                  <Clock size={11} />
+                  {new Date(post.scheduled_at).toLocaleString()}
+                </span>
+              )}
+              {post.published_at && (
+                <span className="flex items-center gap-1 text-green-600">
+                  <CheckCircle2 size={11} />
+                  {new Date(post.published_at).toLocaleString()}
+                </span>
+              )}
+            </div>
+
+            {/* publish action */}
+            {canPublish && (
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={<Send size={12} />}
+                loading={isPublishing}
+                onClick={() => onPublish(post)}
+                className="shrink-0 text-xs h-7 px-2.5"
+              >
+                Publish
+              </Button>
             )}
           </div>
+
+          {/* error message if failed */}
+          {post.status === 'failed' && post.error_message && (
+            <div className="flex gap-1.5 rounded-lg border border-red-100 bg-red-50 px-2.5 py-1.5">
+              <AlertCircle size={12} className="mt-0.5 shrink-0 text-red-500" />
+              <p className="text-[11px] text-red-600 leading-snug">{post.error_message}</p>
+            </div>
+          )}
         </div>
       </div>
     </Card>
   )
 }
 
-function PostsList({ connections }) {
+function PostsList() {
   const { data: posts = [], isLoading, isError, refetch } = useSocialPosts()
+  const { mutate: publishPost, isPending: isPublishing, variables: publishingVars } = usePublishSocialPost()
+
+  const [publishTarget, setPublishTarget] = useState(null)
 
   if (isLoading) return <PageSpinner />
 
@@ -311,9 +423,32 @@ function PostsList({ connections }) {
   )
 
   return (
-    <div className="flex flex-col gap-3">
-      {list.map((post) => <PostCard key={post.id} post={post} />)}
-    </div>
+    <>
+      <div className="flex flex-col gap-3">
+        {list.map((post) => (
+          <PostCard
+            key={post.id}
+            post={post}
+            onPublish={setPublishTarget}
+            isPublishing={isPublishing && publishingVars?.id === post.id}
+          />
+        ))}
+      </div>
+
+      {publishTarget && (
+        <PublishModal
+          post={publishTarget}
+          onConfirm={(platforms) =>
+            publishPost(
+              { id: publishTarget.id, platforms },
+              { onSuccess: () => setPublishTarget(null) }
+            )
+          }
+          onCancel={() => setPublishTarget(null)}
+          isLoading={isPublishing}
+        />
+      )}
+    </>
   )
 }
 
@@ -502,7 +637,7 @@ export default function SocialMediaPage() {
               </CardBody>
             </Card>
           ) : (
-            <PostsList connections={connectedAccounts} />
+            <PostsList />
           )}
         </div>
       )}

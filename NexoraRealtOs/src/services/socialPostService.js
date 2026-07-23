@@ -75,3 +75,15 @@ export async function getSocialPosts(params = {}) {
   const { data } = await apiClient.get('/social-posts/posts/', { params })
   return data
 }
+
+/**
+ * POST /api/social-posts/posts/{id}/publish/
+ * Publish a post (draft) to one or more platforms immediately.
+ *
+ * @param {number}   id        - post ID
+ * @param {string[]} platforms - e.g. ["facebook"] or ["facebook", "instagram"]
+ */
+export async function publishSocialPost(id, platforms) {
+  const { data } = await apiClient.post(`/social-posts/posts/${id}/publish/`, { platforms })
+  return data
+}
