@@ -2,7 +2,7 @@ import apiClient from '@/lib/axios'
 
 /**
  * GET /api/social-posts/connections/meta/start/
- * Returns { auth_url } — redirect user to this URL to begin OAuth flow.
+ * Returns { auth_url } — redirect the user to Facebook's OAuth dialog.
  */
 export async function startMetaConnection() {
   const { data } = await apiClient.get('/social-posts/connections/meta/start/')
@@ -11,10 +11,11 @@ export async function startMetaConnection() {
 
 /**
  * GET /api/social-posts/connections/
- * Returns all active social connections for the current agency.
+ * Returns all connected social accounts for the current agency.
+ * Shape: [{ id, provider, platform, name, username, page_id, status, ... }]
  */
 export async function getSocialConnections() {
-  const { data } = await apiClient.get('/social-posts/connections/')
+  const { data } = await apiClient.get('/social-posts/accounts/')
   return data
 }
 

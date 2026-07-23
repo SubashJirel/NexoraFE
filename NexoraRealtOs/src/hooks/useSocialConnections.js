@@ -18,8 +18,8 @@ export function useSocialConnections() {
 }
 
 /**
- * Start the Meta (Facebook/Instagram) OAuth flow.
- * On success, redirects the browser to Facebook's auth dialog.
+ * Start the Meta OAuth flow.
+ * Redirects the browser to Facebook's auth dialog.
  */
 export function useStartMetaConnection() {
   return useMutation({
@@ -49,13 +49,13 @@ export function useDisconnectSocialAccount() {
     mutationFn: (id) => deleteSocialConnection(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: SOCIAL_CONNECTIONS_KEY })
-      toast.success('Account disconnected successfully.')
+      toast.success('Account disconnected.')
     },
     onError: (err) => {
       const msg =
         err.response?.data?.detail ||
         err.response?.data?.message ||
-        'Failed to disconnect account. Please try again.'
+        'Failed to disconnect. Please try again.'
       toast.error(msg)
     },
   })
