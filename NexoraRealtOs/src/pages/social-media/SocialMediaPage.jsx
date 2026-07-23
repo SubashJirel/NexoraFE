@@ -1,17 +1,20 @@
 import { useState } from 'react'
 import {
   Link2, Link2Off, AlertCircle, Share2,
-  CheckCircle2, RefreshCw, ExternalLink,
+  CheckCircle2, RefreshCw, PenSquare,
+  ImageIcon, Clock, FileEdit,
 } from 'lucide-react'
 import {
   useSocialConnections,
   useStartMetaConnection,
   useDisconnectSocialAccount,
 } from '@/hooks/useSocialConnections'
+import { useSocialPosts } from '@/hooks/useCreateSocialPost'
 import { Card, CardBody } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { cn } from '@/lib/cn'
+import CreatePostModal from '@/components/social/CreatePostModal'
 
 // ── Inline SVG brand icons ────────────────────────────────────
 function FacebookIcon({ size = 24, color = 'currentColor' }) {
@@ -221,6 +224,126 @@ function HowItWorks() {
   )
 }
 
+// ── Posts list ────────────────────────────────────────────────
+
+const STATUS_STYLES = {
+  draft:     'bg-[#EEF2F2] text-[#637079]',
+  scheduled: 'bg-amber-50 text-amber-700',
+  published: 'bg-green-100 text-green-700',
+  failed:    'bg-red-50 text-red-600',
+}
+
+function PostCard({ post }) {
+  const statusLabel = post.status?.charAt(0).toUpperCase() + post.status?.slice(1)
+
+  return (
+    <Card padding="none" className="overflow-hidden">
+      <div className="flex gap-0">
+        {/* image thumbnail */}
+        {post.image ? (
+          <div className="shrink-0 w-20 h-20 sm:w-24 sm:h-24">
+            <img src={post.image} alt="" className="w-full h-full object-cover" />
+          </div>
+        ) : (
+          <div className="shrink-0 w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center bg-[#EEF2F2]">
+            <ImageIcon size={22} className="text-[#B8C9C5]" />
+          </div>
+        )}
+
+        {/* content */}
+        <div className="flex-1 min-w-0 px-4 py-3 flex flex-col justify-between gap-2">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-sm text-[#263238] line-clamp-2 leading-snug">
+              {post.caption || <span className="italic text-[#8b969d]">No caption</span>}
+            </p>
+            <span className={cn(
+              'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold',
+              STATUS_STYLES[post.status] ?? STATUS_STYLES.draft
+            )}>
+              {statusLabel}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3 text-[11px] text-[#8b969d] flex-wrap">
+            <span className="capitalize font-medium text-[#637079]">{post.platform}</span>
+            {post.created_by_name && <span>by {post.created_by_name}</span>}
+            <span>{new Date(post.created_at).toLocaleDateString()}</span>
+            {post.scheduled_at && (
+              <span className="flex items-center gap-1 text-amber-600">
+                <Clock size={11} />
+                {new Date(post.scheduled_at).toLocaleString()}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+function PostsList({ connections }) {
+  const { data: posts = [], isLoading, isError, refetch } = useSocialPosts()
+
+  if (isLoading) return <PageSpinner />
+
+  if (isError) return (
+    <Card>
+      <CardBody className="flex flex-col items-center py-10 text-center">
+        <AlertCircle size={32} className="text-red-400 mb-3" />
+        <p className="font-semibold text-[#263238]">Failed to load posts</p>
+        <Button variant="outline" size="sm" className="mt-3" onClick={refetch}>Try again</Button>
+      </CardBody>
+    </Card>
+  )
+
+  const list = Array.isArray(posts) ? posts : (posts?.results ?? [])
+
+  if (list.length === 0) return (
+    <Card>
+      <CardBody className="flex flex-col items-center py-12 text-center">
+        <FileEdit size={36} className="text-[#B8C9C5] mb-3" />
+        <p className="font-semibold text-[#263238]">No posts yet</p>
+        <p className="mt-1 text-sm text-[#637079]">
+          Create your first post using the button above.
+        </p>
+      </CardBody>
+    </Card>
+  )
+
+  return (
+    <div className="flex flex-col gap-3">
+      {list.map((post) => <PostCard key={post.id} post={post} />)}
+    </div>
+  )
+}
+
+// ── Tabs ──────────────────────────────────────────────────────
+
+function Tabs({ active, onChange }) {
+  const tabs = [
+    { id: 'connections', label: 'Connections' },
+    { id: 'posts',       label: 'Posts' },
+  ]
+  return (
+    <div className="flex gap-1 rounded-xl bg-[#EEF2F2] p-1 w-fit">
+      {tabs.map((t) => (
+        <button
+          key={t.id}
+          onClick={() => onChange(t.id)}
+          className={cn(
+            'px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors duration-150',
+            active === t.id
+              ? 'bg-white text-[#263238] shadow-sm'
+              : 'text-[#637079] hover:text-[#263238]'
+          )}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 // ── Main page ─────────────────────────────────────────────────
 export default function SocialMediaPage() {
   const { data: connections = [], isLoading, isError, refetch } = useSocialConnections()
@@ -228,9 +351,13 @@ export default function SocialMediaPage() {
   const { mutate: disconnect, isPending: isDisconnecting } = useDisconnectSocialAccount()
 
   const [disconnectTarget, setDisconnectTarget] = useState(null)
+  const [tab, setTab] = useState('connections')
+  const [showCreatePost, setShowCreatePost] = useState(false)
 
   const getConnection = (platform) =>
     connections.find((c) => c.platform?.toLowerCase() === platform)
+
+  const connectedAccounts = connections.filter((c) => c.status === 'connected')
 
   return (
     <div className="space-y-6">
@@ -246,81 +373,139 @@ export default function SocialMediaPage() {
             Connect your social accounts to post listings and capture leads automatically.
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          leftIcon={<RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />}
-          onClick={refetch}
-          disabled={isLoading}
-        >
-          Refresh
-        </Button>
-      </div>
-
-      {/* ── How it works ─────────────────────────────────── */}
-      <HowItWorks />
-
-      {/* ── Platform cards ───────────────────────────────── */}
-      <div>
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-[#8b969d]">
-          Integrations
-        </h3>
-
-        {isLoading ? (
-          <PageSpinner />
-        ) : isError ? (
-          <Card>
-            <CardBody className="flex flex-col items-center py-12 text-center">
-              <AlertCircle size={36} className="text-red-400 mb-3" />
-              <p className="font-semibold text-[#263238]">Failed to load connections</p>
-              <p className="mt-1 text-sm text-[#637079]">Could not fetch your connected accounts.</p>
-              <Button variant="outline" size="sm" className="mt-4" onClick={refetch}>Try again</Button>
-            </CardBody>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <PlatformCard
-              platform="facebook"
-              icon={FacebookIcon}
-              brandColor="#1877F2"
-              brandBg="#1877F2"
-              description="Post property listings to your Facebook Page, respond to inquiries, and automatically capture conversations as leads."
-              connection={getConnection('facebook')}
-              onConnect={() => startMeta()}
-              onDisconnect={setDisconnectTarget}
-              isConnecting={isConnecting}
-            />
-            <PlatformCard
-              platform="instagram"
-              icon={InstagramIcon}
-              brandColor="#E1306C"
-              brandBg="#E1306C"
-              description="Share property photos and stories. Connecting your Facebook Page will also link any attached Instagram Business account."
-              connection={getConnection('instagram')}
-              onConnect={() => startMeta()}
-              onDisconnect={setDisconnectTarget}
-              isConnecting={isConnecting}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* ── Info note ────────────────────────────────────── */}
-      <div className="flex gap-3 rounded-xl border border-[#DDE5E3] bg-[#F8FAFA] px-5 py-4">
-        <AlertCircle size={18} className="mt-0.5 shrink-0 text-[#496B5A]" />
-        <p className="text-sm text-[#637079] leading-relaxed">
-          After connecting, Facebook redirects back to the server. Simply navigate back to this page
-          to see your connected accounts. You can revoke access at any time from your{' '}
-          <a
-            href="https://www.facebook.com/settings?tab=business_tools"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#496B5A] underline underline-offset-2 hover:text-[#3a5649]"
+        <div className="flex items-center gap-2 flex-wrap">
+          {connectedAccounts.length > 0 && (
+            <Button
+              variant="primary"
+              size="sm"
+              leftIcon={<PenSquare size={14} />}
+              onClick={() => setShowCreatePost(true)}
+            >
+              Create Post
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            leftIcon={<RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />}
+            onClick={refetch}
+            disabled={isLoading}
           >
-            Facebook Business Settings
-          </a>.
-        </p>
+            Refresh
+          </Button>
+        </div>
       </div>
+
+      {/* ── Tabs ─────────────────────────────────────────── */}
+      <Tabs active={tab} onChange={setTab} />
+
+      {/* ── Tab: Connections ─────────────────────────────── */}
+      {tab === 'connections' && (
+        <>
+          {/* How it works */}
+          <HowItWorks />
+
+          {/* Platform cards */}
+          <div>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-[#8b969d]">
+              Integrations
+            </h3>
+
+            {isLoading ? (
+              <PageSpinner />
+            ) : isError ? (
+              <Card>
+                <CardBody className="flex flex-col items-center py-12 text-center">
+                  <AlertCircle size={36} className="text-red-400 mb-3" />
+                  <p className="font-semibold text-[#263238]">Failed to load connections</p>
+                  <p className="mt-1 text-sm text-[#637079]">Could not fetch your connected accounts.</p>
+                  <Button variant="outline" size="sm" className="mt-4" onClick={refetch}>Try again</Button>
+                </CardBody>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <PlatformCard
+                  platform="facebook"
+                  icon={FacebookIcon}
+                  brandColor="#1877F2"
+                  brandBg="#1877F2"
+                  description="Post property listings to your Facebook Page, respond to inquiries, and automatically capture conversations as leads."
+                  connection={getConnection('facebook')}
+                  onConnect={() => startMeta()}
+                  onDisconnect={setDisconnectTarget}
+                  isConnecting={isConnecting}
+                />
+                <PlatformCard
+                  platform="instagram"
+                  icon={InstagramIcon}
+                  brandColor="#E1306C"
+                  brandBg="#E1306C"
+                  description="Share property photos and stories. Connecting your Facebook Page will also link any attached Instagram Business account."
+                  connection={getConnection('instagram')}
+                  onConnect={() => startMeta()}
+                  onDisconnect={setDisconnectTarget}
+                  isConnecting={isConnecting}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Info note */}
+          <div className="flex gap-3 rounded-xl border border-[#DDE5E3] bg-[#F8FAFA] px-5 py-4">
+            <AlertCircle size={18} className="mt-0.5 shrink-0 text-[#496B5A]" />
+            <p className="text-sm text-[#637079] leading-relaxed">
+              After connecting, Facebook redirects back to the server. Simply navigate back to this page
+              to see your connected accounts. You can revoke access at any time from your{' '}
+              <a
+                href="https://www.facebook.com/settings?tab=business_tools"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#496B5A] underline underline-offset-2 hover:text-[#3a5649]"
+              >
+                Facebook Business Settings
+              </a>.
+            </p>
+          </div>
+        </>
+      )}
+
+      {/* ── Tab: Posts ───────────────────────────────────── */}
+      {tab === 'posts' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-[#8b969d]">
+              All Posts
+            </h3>
+            {connectedAccounts.length > 0 && (
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={<PenSquare size={14} />}
+                onClick={() => setShowCreatePost(true)}
+              >
+                Create Post
+              </Button>
+            )}
+          </div>
+
+          {connectedAccounts.length === 0 ? (
+            <Card>
+              <CardBody className="flex flex-col items-center py-12 text-center">
+                <Share2 size={36} className="text-[#B8C9C5] mb-3" />
+                <p className="font-semibold text-[#263238]">No connected accounts</p>
+                <p className="mt-1 text-sm text-[#637079]">
+                  Connect a Facebook or Instagram account first.
+                </p>
+                <Button variant="outline" size="sm" className="mt-4" onClick={() => setTab('connections')}>
+                  Go to Connections
+                </Button>
+              </CardBody>
+            </Card>
+          ) : (
+            <PostsList connections={connectedAccounts} />
+          )}
+        </div>
+      )}
 
       {/* ── Disconnect modal ──────────────────────────────── */}
       {disconnectTarget && (
@@ -331,6 +516,13 @@ export default function SocialMediaPage() {
           isLoading={isDisconnecting}
         />
       )}
+
+      {/* ── Create post modal ─────────────────────────────── */}
+      <CreatePostModal
+        open={showCreatePost}
+        onClose={() => setShowCreatePost(false)}
+        connections={connectedAccounts}
+      />
     </div>
   )
 }
