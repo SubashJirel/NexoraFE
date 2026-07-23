@@ -4,6 +4,7 @@ import {
   getSocialPosts,
   publishSocialPost,
   updateSocialPost,
+  deleteSocialPost,
 } from '@/services/socialPostService'
 import toast from 'react-hot-toast'
 
@@ -96,6 +97,33 @@ export function useUpdateSocialPost({ onSuccess } = {}) {
         err.response?.data?.message ||
         Object.values(err.response?.data ?? {}).flat().join(' ') ||
         'Failed to update post. Please try again.'
+      toast.error(detail)
+    },
+  })
+}
+
+/**
+ * Delete a social post.
+ *
+ * Usage:
+ *   const { mutate, isPending } = useDeleteSocialPost()
+ *   mutate(postId)
+ */
+export function useDeleteSocialPost({ onSuccess } = {}) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id) => deleteSocialPost(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: SOCIAL_POSTS_KEY })
+      toast.success('Post deleted.')
+      onSuccess?.()
+    },
+    onError: (err) => {
+      const detail =
+        err.response?.data?.detail ||
+        err.response?.data?.message ||
+        'Failed to delete post. Please try again.'
       toast.error(detail)
     },
   })

@@ -114,3 +114,13 @@ export async function updateSocialPost(id, payload) {
 
   return data
 }
+
+/**
+ * DELETE /api/social-posts/posts/{id}/
+ * Permanently delete a social post record.
+ *
+ * @param {number} id - post ID to delete
+ */
+export async function deleteSocialPost(id) {
+  await apiClient.delete(`/social-posts/posts/${id}/`)
+}

@@ -2,14 +2,14 @@ import { useState } from 'react'
 import {
   Link2, Link2Off, AlertCircle, Share2,
   CheckCircle2, RefreshCw, PenSquare,
-  ImageIcon, Clock, FileEdit, Send, Pencil,
+  ImageIcon, Clock, FileEdit, Send, Pencil, Trash2,
 } from 'lucide-react'
 import {
   useSocialConnections,
   useStartMetaConnection,
   useDisconnectSocialAccount,
 } from '@/hooks/useSocialConnections'
-import { useSocialPosts, usePublishSocialPost } from '@/hooks/useCreateSocialPost'
+import { useSocialPosts, usePublishSocialPost, useDeleteSocialPost } from '@/hooks/useCreateSocialPost'
 import { Card, CardBody } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import { PageSpinner } from '@/components/ui/Spinner'
@@ -302,6 +302,43 @@ function PublishModal({ post, onConfirm, onCancel, isLoading }) {
   )
 }
 
+// ── Delete confirmation modal ─────────────────────────────────
+
+function DeletePostModal({ post, onConfirm, onCancel, isLoading }) {
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl mx-4">
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
+          <Trash2 size={20} className="text-red-500" />
+        </div>
+        <h3 className="text-lg font-bold text-[#263238]">Delete Post</h3>
+        <p className="mt-2 text-sm text-[#637079]">
+          Are you sure you want to delete this post? This only removes it from your CRM — it won't affect anything already published on social media.
+        </p>
+        {post?.caption && (
+          <p className="mt-3 rounded-lg border border-[#DDE5E3] bg-[#F8FAFA] px-3 py-2 text-xs text-[#637079] line-clamp-2 leading-relaxed italic">
+            "{post.caption}"
+          </p>
+        )}
+        <div className="mt-6 flex gap-3">
+          <Button variant="ghost" size="md" className="flex-1" onClick={onCancel} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button
+            size="md"
+            className="flex-1 bg-red-500 hover:bg-red-600 text-white border-transparent"
+            loading={isLoading}
+            onClick={onConfirm}
+          >
+            Delete
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Posts list ────────────────────────────────────────────────
 
 const STATUS_STYLES = {
@@ -311,7 +348,7 @@ const STATUS_STYLES = {
   failed:    'bg-red-50 text-red-600',
 }
 
-function PostCard({ post, onPublish, isPublishing, onEdit }) {
+function PostCard({ post, onPublish, isPublishing, onEdit, onDelete }) {
   const statusLabel = post.status?.charAt(0).toUpperCase() + post.status?.slice(1)
   const canPublish = post.status === 'draft' || post.status === 'failed'
   const canEdit    = true
@@ -363,7 +400,7 @@ function PostCard({ post, onPublish, isPublishing, onEdit }) {
               )}
             </div>
 
-            {/* publish / edit actions */}
+            {/* publish / edit / delete actions */}
             {(canPublish || canEdit) && (
               <div className="flex items-center gap-1.5 shrink-0">
                 {canEdit && (
@@ -389,6 +426,14 @@ function PostCard({ post, onPublish, isPublishing, onEdit }) {
                     Publish
                   </Button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => onDelete(post)}
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-[#8b969d] hover:bg-red-50 hover:text-red-500 transition-colors"
+                  aria-label="Delete post"
+                >
+                  <Trash2 size={14} />
+                </button>
               </div>
             )}
           </div>
@@ -409,9 +454,11 @@ function PostCard({ post, onPublish, isPublishing, onEdit }) {
 function PostsList() {
   const { data: posts = [], isLoading, isError, refetch } = useSocialPosts()
   const { mutate: publishPost, isPending: isPublishing, variables: publishingVars } = usePublishSocialPost()
+  const { mutate: deletePost,  isPending: isDeleting }                               = useDeleteSocialPost()
 
   const [publishTarget, setPublishTarget] = useState(null)
   const [editTarget,    setEditTarget]    = useState(null)
+  const [deleteTarget,  setDeleteTarget]  = useState(null)
 
   if (isLoading) return <PageSpinner />
 
@@ -449,6 +496,7 @@ function PostsList() {
             onPublish={setPublishTarget}
             isPublishing={isPublishing && publishingVars?.id === post.id}
             onEdit={setEditTarget}
+            onDelete={setDeleteTarget}
           />
         ))}
       </div>
@@ -473,6 +521,18 @@ function PostsList() {
         onClose={() => setEditTarget(null)}
         post={editTarget}
       />
+
+      {/* delete confirmation modal */}
+      {deleteTarget && (
+        <DeletePostModal
+          post={deleteTarget}
+          onConfirm={() =>
+            deletePost(deleteTarget.id, { onSuccess: () => setDeleteTarget(null) })
+          }
+          onCancel={() => setDeleteTarget(null)}
+          isLoading={isDeleting}
+        />
+      )}
     </>
   )
 }
