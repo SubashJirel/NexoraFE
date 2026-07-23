@@ -87,3 +87,30 @@ export async function publishSocialPost(id, platforms) {
   const { data } = await apiClient.post(`/social-posts/posts/${id}/publish/`, { platforms })
   return data
 }
+
+/**
+ * PATCH /api/social-posts/posts/{id}/
+ * Partially update a social post.
+ * Sends as multipart/form-data so an updated image file can be included.
+ *
+ * @param {number} id       - post ID to update
+ * @param {Object} payload  - only the fields you want to change
+ *   @param {string}      [payload.caption]
+ *   @param {string}      [payload.status]       - "draft" | "scheduled"
+ *   @param {File|null}   [payload.image]        - new image file (omit to keep existing)
+ *   @param {string|null} [payload.scheduled_at]
+ */
+export async function updateSocialPost(id, payload) {
+  const form = new FormData()
+
+  if (payload.caption !== undefined) form.append('caption', payload.caption)
+  if (payload.status  !== undefined) form.append('status',  payload.status)
+  if (payload.scheduled_at !== undefined) form.append('scheduled_at', payload.scheduled_at ?? '')
+  if (payload.image instanceof File)  form.append('image', payload.image)
+
+  const { data } = await apiClient.patch(`/social-posts/posts/${id}/`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+
+  return data
+}

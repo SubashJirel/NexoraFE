@@ -1,10 +1,10 @@
-import { useRef, useState } from 'react'
-import { X, ImagePlus, Trash2} from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { X, ImagePlus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import Button from '@/components/ui/Button'
 import Textarea from '@/components/ui/Textarea'
 import Select from '@/components/ui/Select'
-import { useCreateSocialPost } from '@/hooks/useCreateSocialPost'
+import { useCreateSocialPost, useUpdateSocialPost } from '@/hooks/useCreateSocialPost'
 
 // ── helpers ───────────────────────────────────────────────────
 
@@ -32,7 +32,15 @@ function PlatformIcon({ platform, size = 16 }) {
 
 // ── image drop zone ───────────────────────────────────────────
 
-function ImageDropZone({ file, onFile, onClear }) {
+/**
+ * ImageDropZone
+ *
+ * @param {File|null}   file         - new File picked by the user (takes priority)
+ * @param {string|null} existingUrl  - URL of the already-saved image (edit mode)
+ * @param {function}    onFile       - called with a File when user picks one
+ * @param {function}    onClear      - called when user removes the image
+ */
+function ImageDropZone({ file, existingUrl, onFile, onClear }) {
   const inputRef = useRef(null)
   const [dragging, setDragging] = useState(false)
 
@@ -46,23 +54,21 @@ function ImageDropZone({ file, onFile, onClear }) {
   function handleChange(e) {
     const f = e.target.files?.[0]
     if (f) onFile(f)
-    // reset so same file can be re-selected
     e.target.value = ''
   }
 
-  const preview = file ? URL.createObjectURL(file) : null
+  // prefer a freshly-picked file preview; fall back to existing server URL
+  const preview = file ? URL.createObjectURL(file) : existingUrl ?? null
+  const hasImage = Boolean(preview)
+  const previewName = file?.name ?? (existingUrl ? 'Current image' : null)
 
   return (
     <div className="flex flex-col gap-1.5">
       <span className="text-sm font-medium text-[#263238]">Image</span>
 
-      {file ? (
+      {hasImage ? (
         <div className="relative rounded-xl overflow-hidden border border-[#DDE5E3] bg-[#F8FAFA]">
-          <img
-            src={preview}
-            alt="preview"
-            className="w-full max-h-64 object-cover"
-          />
+          <img src={preview} alt="preview" className="w-full max-h-64 object-cover" />
           <button
             type="button"
             onClick={onClear}
@@ -71,8 +77,15 @@ function ImageDropZone({ file, onFile, onClear }) {
           >
             <Trash2 size={13} />
           </button>
-          <div className="px-3 py-2 bg-white border-t border-[#DDE5E3]">
-            <p className="text-xs text-[#637079] truncate">{file.name}</p>
+          <div className="flex items-center justify-between px-3 py-2 bg-white border-t border-[#DDE5E3]">
+            <p className="text-xs text-[#637079] truncate">{previewName}</p>
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              className="text-xs font-semibold text-[#496B5A] hover:text-[#3a5649] shrink-0 ml-2"
+            >
+              Replace
+            </button>
           </div>
         </div>
       ) : (
@@ -114,46 +127,94 @@ function ImageDropZone({ file, onFile, onClear }) {
 // ── modal ─────────────────────────────────────────────────────
 
 /**
- * CreatePostModal
+ * CreatePostModal — handles both create and edit modes.
  *
- * @param {boolean}  open          - controls visibility
- * @param {function} onClose       - called when modal should close
- * @param {Array}    connections   - list of connected social accounts
+ * Create mode:  pass `connections` + leave `post` undefined
+ * Edit mode:    pass `post` (existing post object); `connections` not needed
+ *
+ * @param {boolean}  open        - controls visibility
+ * @param {function} onClose     - called when modal should close
+ * @param {Array}    connections - connected social accounts (create mode)
+ * @param {Object}   [post]      - existing post to edit (edit mode)
  */
-export default function CreatePostModal({ open, onClose, connections = [] }) {
-  const [accountId, setAccountId] = useState('')
-  const [caption, setCaption] = useState('')
-  const [status, setStatus] = useState('draft')
-  const [image, setImage] = useState(null)
+export default function CreatePostModal({ open, onClose, connections = [], post }) {
+  const isEditMode = Boolean(post)
 
-  const { mutate: createPost, isPending } = useCreateSocialPost({
+  // ── form state ──────────────────────────────────────────────
+  const [accountId, setAccountId] = useState('')
+  const [caption,   setCaption]   = useState('')
+  const [status,    setStatus]    = useState('draft')
+  const [image,     setImage]     = useState(null)   // new File picked by user
+  const [clearImg,  setClearImg]  = useState(false)  // user explicitly removed existing image
+
+  // Seed form when opening in edit mode (or when `post` changes)
+  useEffect(() => {
+    if (!open) return
+    if (isEditMode) {
+      setAccountId(String(post.social_account ?? ''))
+      setCaption(post.caption ?? '')
+      setStatus(post.status ?? 'draft')
+      setImage(null)
+      setClearImg(false)
+    } else {
+      setAccountId('')
+      setCaption('')
+      setStatus('draft')
+      setImage(null)
+      setClearImg(false)
+    }
+  }, [open, post, isEditMode])
+
+  // ── mutations ───────────────────────────────────────────────
+  const { mutate: createPost, isPending: isCreating } = useCreateSocialPost({
+    onSuccess: () => handleClose(),
+  })
+  const { mutate: updatePost, isPending: isUpdating } = useUpdateSocialPost({
     onSuccess: () => handleClose(),
   })
 
+  const isPending = isCreating || isUpdating
+
+  // ── derived ─────────────────────────────────────────────────
   const selectedAccount = connections.find((c) => String(c.id) === String(accountId))
-  const captionMax = 2200
+  const captionMax    = 2200
   const captionLength = caption.length
 
+  // In edit mode the existing image URL from the server
+  const existingImageUrl = isEditMode && !clearImg ? (post?.image ?? null) : null
+
+  // ── handlers ────────────────────────────────────────────────
   function handleClose() {
     if (isPending) return
-    setAccountId('')
-    setCaption('')
-    setStatus('draft')
-    setImage(null)
     onClose()
+  }
+
+  function handleClearImage() {
+    setImage(null)
+    setClearImg(true)
   }
 
   function handleSubmit(e) {
     e.preventDefault()
-    if (!accountId) return
 
-    createPost({
-      social_account: Number(accountId),
-      platform: selectedAccount?.platform ?? 'facebook',
-      caption,
-      status,
-      image: image ?? undefined,
-    })
+    if (isEditMode) {
+      updatePost({
+        id: post.id,
+        caption,
+        status,
+        // only send image if user picked a new one
+        ...(image instanceof File ? { image } : {}),
+      })
+    } else {
+      if (!accountId) return
+      createPost({
+        social_account: Number(accountId),
+        platform: selectedAccount?.platform ?? 'facebook',
+        caption,
+        status,
+        image: image ?? undefined,
+      })
+    }
   }
 
   if (!open) return null
@@ -172,7 +233,9 @@ export default function CreatePostModal({ open, onClose, connections = [] }) {
 
         {/* header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#DDE5E3]">
-          <h3 className="text-base font-bold text-[#263238]">Create Post</h3>
+          <h3 className="text-base font-bold text-[#263238]">
+            {isEditMode ? 'Edit Post' : 'Create Post'}
+          </h3>
           <button
             type="button"
             onClick={handleClose}
@@ -186,51 +249,73 @@ export default function CreatePostModal({ open, onClose, connections = [] }) {
 
         {/* body */}
         <form
-          id="create-post-form"
+          id="post-form"
           onSubmit={handleSubmit}
           className="flex-1 overflow-y-auto px-6 py-5 space-y-5"
         >
-          {/* account selector */}
-          <Select
-            label="Account"
-            value={accountId}
-            onChange={(e) => setAccountId(e.target.value)}
-            required
-          >
-            <option value="" disabled>Select a connected account</option>
-            {connections.map((c) => (
-              <option key={c.id} value={c.id}>
-                {platformLabel(c.platform)} — {c.name || c.username || `#${c.id}`}
-              </option>
-            ))}
-          </Select>
+          {/* account selector — create mode only */}
+          {!isEditMode && (
+            <>
+              <Select
+                label="Account"
+                value={accountId}
+                onChange={(e) => setAccountId(e.target.value)}
+                required
+              >
+                <option value="" disabled>Select a connected account</option>
+                {connections.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {platformLabel(c.platform)} — {c.name || c.username || `#${c.id}`}
+                  </option>
+                ))}
+              </Select>
 
-          {/* selected account badge */}
-          {selectedAccount && (
+              {selectedAccount && (
+                <div className="flex items-center gap-2 rounded-lg border border-[#DDE5E3] bg-[#F8FAFA] px-3 py-2">
+                  <span className={cn(
+                    'flex h-6 w-6 items-center justify-center rounded-full text-white text-xs shrink-0',
+                    selectedAccount.platform?.toLowerCase() === 'instagram'
+                      ? 'bg-gradient-to-br from-[#833AB4] via-[#E1306C] to-[#F77737]'
+                      : 'bg-[#1877F2]'
+                  )}>
+                    <PlatformIcon platform={selectedAccount.platform} size={13} />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-[#263238] truncate">{selectedAccount.name}</p>
+                    {selectedAccount.username && (
+                      <p className="text-[11px] text-[#637079]">@{selectedAccount.username}</p>
+                    )}
+                  </div>
+                  <span className="ml-auto inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
+                    Connected
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* edit mode — show platform badge (read-only) */}
+          {isEditMode && post?.platform && (
             <div className="flex items-center gap-2 rounded-lg border border-[#DDE5E3] bg-[#F8FAFA] px-3 py-2">
               <span className={cn(
                 'flex h-6 w-6 items-center justify-center rounded-full text-white text-xs shrink-0',
-                selectedAccount.platform?.toLowerCase() === 'instagram' ? 'bg-gradient-to-br from-[#833AB4] via-[#E1306C] to-[#F77737]' : 'bg-[#1877F2]'
+                post.platform?.toLowerCase() === 'instagram'
+                  ? 'bg-gradient-to-br from-[#833AB4] via-[#E1306C] to-[#F77737]'
+                  : 'bg-[#1877F2]'
               )}>
-                <PlatformIcon platform={selectedAccount.platform} size={13} />
+                <PlatformIcon platform={post.platform} size={13} />
               </span>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-[#263238] truncate">{selectedAccount.name}</p>
-                {selectedAccount.username && (
-                  <p className="text-[11px] text-[#637079]">@{selectedAccount.username}</p>
-                )}
-              </div>
-              <span className="ml-auto inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
-                Connected
-              </span>
+              <p className="text-xs font-semibold text-[#263238] capitalize">{post.platform}</p>
+              <span className="ml-auto text-[11px] text-[#8b969d]">Platform cannot be changed</span>
             </div>
           )}
 
           {/* image upload */}
           <ImageDropZone
             file={image}
+            existingUrl={existingImageUrl}
             onFile={setImage}
-            onClear={() => setImage(null)}
+            onClear={handleClearImage}
           />
 
           {/* caption */}
@@ -264,23 +349,20 @@ export default function CreatePostModal({ open, onClose, connections = [] }) {
 
         {/* footer */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#DDE5E3]">
-          <Button
-            variant="ghost"
-            size="md"
-            onClick={handleClose}
-            disabled={isPending}
-          >
+          <Button variant="ghost" size="md" onClick={handleClose} disabled={isPending}>
             Cancel
           </Button>
           <Button
             type="submit"
-            form="create-post-form"
+            form="post-form"
             variant="primary"
             size="md"
             loading={isPending}
-            disabled={!accountId}
+            disabled={!isEditMode && !accountId}
           >
-            {status === 'draft' ? 'Save Draft' : 'Schedule Post'}
+            {isEditMode
+              ? 'Save Changes'
+              : status === 'draft' ? 'Save Draft' : 'Schedule Post'}
           </Button>
         </div>
       </div>

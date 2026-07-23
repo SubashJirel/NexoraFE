@@ -1,5 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createSocialPost, getSocialPosts, publishSocialPost } from '@/services/socialPostService'
+import {
+  createSocialPost,
+  getSocialPosts,
+  publishSocialPost,
+  updateSocialPost,
+} from '@/services/socialPostService'
 import toast from 'react-hot-toast'
 
 export const SOCIAL_POSTS_KEY = ['social-posts']
@@ -62,6 +67,35 @@ export function usePublishSocialPost({ onSuccess } = {}) {
         err.response?.data?.message ||
         Object.values(err.response?.data ?? {}).flat().join(' ') ||
         'Failed to publish post. Please try again.'
+      toast.error(detail)
+    },
+  })
+}
+
+/**
+ * Partially update (PATCH) a social post.
+ * Only sends the fields you pass — safe to call with just { caption } for example.
+ *
+ * Usage:
+ *   const { mutate, isPending } = useUpdateSocialPost()
+ *   mutate({ id: 1, caption: 'new text', image: File })
+ */
+export function useUpdateSocialPost({ onSuccess } = {}) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, ...payload }) => updateSocialPost(id, payload),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: SOCIAL_POSTS_KEY })
+      toast.success('Post updated successfully!')
+      onSuccess?.(data)
+    },
+    onError: (err) => {
+      const detail =
+        err.response?.data?.detail ||
+        err.response?.data?.message ||
+        Object.values(err.response?.data ?? {}).flat().join(' ') ||
+        'Failed to update post. Please try again.'
       toast.error(detail)
     },
   })

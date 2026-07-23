@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   Link2, Link2Off, AlertCircle, Share2,
   CheckCircle2, RefreshCw, PenSquare,
-  ImageIcon, Clock, FileEdit, Send,
+  ImageIcon, Clock, FileEdit, Send, Pencil,
 } from 'lucide-react'
 import {
   useSocialConnections,
@@ -311,9 +311,10 @@ const STATUS_STYLES = {
   failed:    'bg-red-50 text-red-600',
 }
 
-function PostCard({ post, onPublish, isPublishing }) {
+function PostCard({ post, onPublish, isPublishing, onEdit }) {
   const statusLabel = post.status?.charAt(0).toUpperCase() + post.status?.slice(1)
   const canPublish = post.status === 'draft' || post.status === 'failed'
+  const canEdit    = true
 
   return (
     <Card padding="none" className="overflow-hidden">
@@ -362,18 +363,33 @@ function PostCard({ post, onPublish, isPublishing }) {
               )}
             </div>
 
-            {/* publish action */}
-            {canPublish && (
-              <Button
-                variant="primary"
-                size="sm"
-                leftIcon={<Send size={12} />}
-                loading={isPublishing}
-                onClick={() => onPublish(post)}
-                className="shrink-0 text-xs h-7 px-2.5"
-              >
-                Publish
-              </Button>
+            {/* publish / edit actions */}
+            {(canPublish || canEdit) && (
+              <div className="flex items-center gap-1.5 shrink-0">
+                {canEdit && (
+                  <Button
+                    variant="outlined"
+                    size="sm"
+                    leftIcon={<Pencil size={12} />}
+                    onClick={() => onEdit(post)}
+                    className="text-xs h-7 px-2.5"
+                  >
+                    Edit
+                  </Button>
+                )}
+                {canPublish && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    leftIcon={<Send size={12} />}
+                    loading={isPublishing}
+                    onClick={() => onPublish(post)}
+                    className="text-xs h-7 px-2.5"
+                  >
+                    Publish
+                  </Button>
+                )}
+              </div>
             )}
           </div>
 
@@ -395,6 +411,7 @@ function PostsList() {
   const { mutate: publishPost, isPending: isPublishing, variables: publishingVars } = usePublishSocialPost()
 
   const [publishTarget, setPublishTarget] = useState(null)
+  const [editTarget,    setEditTarget]    = useState(null)
 
   if (isLoading) return <PageSpinner />
 
@@ -431,6 +448,7 @@ function PostsList() {
             post={post}
             onPublish={setPublishTarget}
             isPublishing={isPublishing && publishingVars?.id === post.id}
+            onEdit={setEditTarget}
           />
         ))}
       </div>
@@ -448,6 +466,13 @@ function PostsList() {
           isLoading={isPublishing}
         />
       )}
+
+      {/* edit modal — reuses CreatePostModal in edit mode */}
+      <CreatePostModal
+        open={Boolean(editTarget)}
+        onClose={() => setEditTarget(null)}
+        post={editTarget}
+      />
     </>
   )
 }
