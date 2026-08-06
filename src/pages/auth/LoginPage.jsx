@@ -44,6 +44,26 @@ export default function LoginPage() {
       toast.success(data.message || 'Welcome back!')
       navigate(from, { replace: true })
     } catch (err) {
+      if (err.response?.data?.payment_required) {
+        navigate('/payment-required', {
+          state: {
+            agency: err.response.data.agency,
+            email: form.email,
+            paymentStatus: err.response.data.payment_status,
+          },
+        })
+        return
+      }
+      if (err.response?.data?.otp_required) {
+        navigate('/verify-login-otp', {
+          state: {
+            email: err.response.data.email || form.email,
+            password: form.password,
+            from,
+          },
+        })
+        return
+      }
       const message =
         err.response?.data?.detail ||
         err.response?.data?.non_field_errors?.[0] ||

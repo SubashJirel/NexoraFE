@@ -5,6 +5,7 @@ import { cn } from '@/lib/cn'
 import { useCreateProperty } from '@/hooks/useCreateProperty'
 import Button from '@/components/ui/Button'
 import { INITIAL_FORM, validateStep, buildPropertyPayload } from '../propertyFormUtils'
+import { useResource } from '@/hooks/useOperations'
 
 import Step1BasicInfo   from './steps/Step1BasicInfo'
 import Step2Location    from './steps/Step2Location'
@@ -28,6 +29,7 @@ export default function AddPropertyPage() {
   const [form, setForm]           = useState(INITIAL_FORM)
   const [mediaFiles, setMediaFiles] = useState([])
   const [errors, setErrors]       = useState({})
+  const customFields = useResource('custom-fields', { module: 'property' })
 
   const { mutate: createProperty, isPending } = useCreateProperty({
     onSuccess: () => navigate('/properties'),
@@ -50,7 +52,7 @@ export default function AddPropertyPage() {
     setStep((s) => Math.max(s - 1, 1))
   }
 
-  function submit() {
+  function submit(status) {
     const e1 = validateStep(1, form)
     const e2 = validateStep(2, form)
     const all = { ...e1, ...e2 }
@@ -59,10 +61,11 @@ export default function AddPropertyPage() {
       setStep(Object.keys(e1).length ? 1 : 2)
       return
     }
-    createProperty({ propertyPayload: buildPropertyPayload(form), mediaFiles })
+    const submissionForm = status ? { ...form, status } : form
+    createProperty({ propertyPayload: buildPropertyPayload(submissionForm), mediaFiles })
   }
 
-  const stepProps = { form, errors, onChange }
+  const stepProps = { form, errors, onChange, customFields: customFields.data || [] }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-16">
@@ -75,10 +78,10 @@ export default function AddPropertyPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Button variant="outlined" size="md" onClick={submit} loading={isPending} disabled={isPending}>
+          <Button variant="outlined" size="md" onClick={() => submit('draft')} loading={isPending} disabled={isPending}>
             Save as Draft
           </Button>
-          <Button variant="primary" size="md" onClick={submit} loading={isPending} disabled={isPending}>
+          <Button variant="primary" size="md" onClick={() => submit('available')} loading={isPending} disabled={isPending}>
             Publish &amp; Save
           </Button>
         </div>
@@ -168,7 +171,7 @@ export default function AddPropertyPage() {
                   <Button variant="outlined" size="md" onClick={() => submit('draft')} loading={isPending}>
                     Save Draft
                   </Button>
-                  <Button variant="primary" size="md" onClick={() => submit('active')} loading={isPending}>
+                  <Button variant="primary" size="md" onClick={() => submit('available')} loading={isPending}>
                     Publish &amp; Save
                   </Button>
                 </div>

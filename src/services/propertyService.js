@@ -116,6 +116,11 @@ export async function deletePropertyMedia(mediaId) {
   return data
 }
 
+export async function updatePropertyMedia(mediaId, payload) {
+  const { data } = await apiClient.patch(`/properties/media/${mediaId}/`, payload)
+  return data
+}
+
 /**
  * Orchestrates both APIs as a single atomic action:
  *  1. POST /api/properties/          → get propertyId

@@ -4,9 +4,9 @@ import { create } from 'zustand'
  * Global UI state — sidebar, theme, modal management.
  * Not persisted (resets on reload by design).
  */
-export const useUIStore = create((set, get) => ({
+export const useUIStore = create((set) => ({
   // Sidebar
-  sidebarOpen: true,
+  sidebarOpen: false,
   sidebarCollapsed: false,
 
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),

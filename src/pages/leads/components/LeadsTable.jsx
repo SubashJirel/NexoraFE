@@ -3,7 +3,6 @@ import { MoreVertical, Phone, MapPin } from 'lucide-react'
 import Avatar from '@/components/ui/Avatar'
 import Badge from '@/components/ui/Badge'
 import { STATUS_MAP, SOURCE_BADGE, formatBudget } from '../leadsConstants'
-import { cn } from '@/lib/cn'
 
 export default function LeadsTable({ leads, onRowClick, onEdit, onDelete }) {
   return (

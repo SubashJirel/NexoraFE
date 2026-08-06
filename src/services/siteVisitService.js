@@ -41,3 +41,12 @@ export async function createSiteVisit(payload) {
   const { data } = await apiClient.post('/site-visits/', payload)
   return data
 }
+
+export async function updateSiteVisit(id, payload) {
+  const { data } = await apiClient.patch(`/site-visits/${id}/`, payload)
+  return data
+}
+
+export async function deleteSiteVisit(id) {
+  await apiClient.delete(`/site-visits/${id}/`)
+}

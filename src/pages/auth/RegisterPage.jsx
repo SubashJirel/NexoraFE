@@ -58,8 +58,15 @@ export default function RegisterPage() {
       const data = await register(payload)
       // data: { message, user, agency }
       // After register the user lands on login — they must sign in with their new credentials
-      toast.success(data.message || 'Agency registered! Please sign in.')
-      navigate('/login', { replace: true })
+      toast.success(data.message || 'Agency registered successfully.')
+      navigate('/payment-required', {
+        replace: true,
+        state: {
+          agency: data.agency,
+          email: form.email.trim(),
+          paymentStatus: data.agency?.payment_status,
+        },
+      })
     } catch (err) {
       // Surface the first field error or a generic message
       const serverErrors = err.response?.data

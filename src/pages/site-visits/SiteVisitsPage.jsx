@@ -2,10 +2,18 @@ import { useState, useMemo } from 'react'
 import {
   Search, CalendarCheck, MapPin, User, Building2,
   Calendar, Clock, SlidersHorizontal, X, Plus,
-  Phone, FileText, ChevronRight,
+  Phone, FileText,
+  CheckCircle2, Pencil, Trash2,
 } from 'lucide-react'
-import { useSiteVisits, useCreateSiteVisit, useSiteVisit } from '@/hooks/useSiteVisits'
+import {
+  useSiteVisits,
+  useCreateSiteVisit,
+  useSiteVisit,
+  useUpdateSiteVisit,
+  useDeleteSiteVisit,
+} from '@/hooks/useSiteVisits'
 import { useAgents } from '@/hooks/useAgents'
+import { useAuthStore } from '@/store/authStore'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
@@ -755,6 +763,8 @@ function SiteVisitDrawer({ visitId, onClose }) {
                 <StatusBadge status={visit.status} />
               </div>
 
+              <VisitLifecycle visit={visit} onDeleted={onClose} />
+
               {/* Lead */}
               <DrawerSection title="Lead">
                 <DrawerRow icon={User} label="Name"    value={visit.lead_name     || `Lead #${visit.lead}`} />
@@ -801,6 +811,14 @@ function SiteVisitDrawer({ visitId, onClose }) {
                 </DrawerSection>
               )}
 
+              {(visit.outcome || visit.cancellation_reason) && (
+                <DrawerSection title="Result">
+                  {visit.outcome && <DrawerRow icon={CheckCircle2} label="Outcome" value={visit.outcome} />}
+                  {visit.cancellation_reason && <DrawerRow icon={X} label="Cancelled" value={visit.cancellation_reason} valueClassName="text-red-500" />}
+                  {visit.completed_at && <DrawerRow icon={CalendarCheck} label="Completed" value={formatScheduledAt(visit.completed_at)} />}
+                </DrawerSection>
+              )}
+
               {/* Meta */}
               <DrawerSection title="Meta">
                 <DrawerRow
@@ -828,6 +846,8 @@ function SiteVisitDrawer({ visitId, onClose }) {
                     valueClassName="text-red-500"
                   />
                 )}
+                {visit.reminder_sent_at && <DrawerRow icon={CheckCircle2} label="Reminder" value={formatScheduledAt(visit.reminder_sent_at)} />}
+                {visit.reminder_error && <DrawerRow icon={X} label="Reminder error" value={visit.reminder_error} valueClassName="text-red-500" />}
               </DrawerSection>
             </div>
           )}
@@ -835,6 +855,66 @@ function SiteVisitDrawer({ visitId, onClose }) {
       </div>
     </>
   )
+}
+
+function VisitLifecycle({ visit, onDeleted }) {
+  const role = useAuthStore((state) => state.user?.role)
+  const { data: agents = [] } = useAgents()
+  const [editing, setEditing] = useState(false)
+  const [form, setForm] = useState(() => ({
+    scheduled_at: toLocalDateTime(visit.scheduled_at),
+    status: visit.status,
+    assigned_agent: visit.assigned_agent || '',
+    notes: visit.notes || '',
+    outcome: visit.outcome || '',
+    cancellation_reason: visit.cancellation_reason || '',
+  }))
+  const update = useUpdateSiteVisit(visit.id, { onSuccess: () => setEditing(false) })
+  const remove = useDeleteSiteVisit(visit.id, { onSuccess: onDeleted })
+  const set = (field, value) => setForm((current) => ({ ...current, [field]: value }))
+
+  function submit(event) {
+    event.preventDefault()
+    update.mutate({
+      scheduled_at: new Date(form.scheduled_at).toISOString(),
+      status: form.status,
+      notes: form.notes,
+      outcome: form.outcome,
+      cancellation_reason: form.cancellation_reason,
+      ...(role !== 'agent' ? { assigned_agent: form.assigned_agent ? Number(form.assigned_agent) : null } : {}),
+    })
+  }
+
+  if (!editing) {
+    return (
+      <div className="flex gap-2">
+        <Button size="sm" variant="outlined" leftIcon={<Pencil size={13} />} onClick={() => setEditing(true)}>Manage visit</Button>
+        <Button size="sm" variant="ghost-danger" leftIcon={<Trash2 size={13} />} loading={remove.isPending} onClick={() => window.confirm('Delete this site visit?') && remove.mutate()}>Delete</Button>
+      </div>
+    )
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-3 rounded-xl border border-[#DDE5E3] bg-[#F8FAFA] p-4">
+      <div className="flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-wider text-[#637079]">Manage lifecycle</p><button type="button" onClick={() => setEditing(false)}><X size={15} /></button></div>
+      <Input label="Scheduled at" type="datetime-local" size="sm" value={form.scheduled_at} onChange={(e) => set('scheduled_at', e.target.value)} required />
+      <div className="grid grid-cols-2 gap-3">
+        <Select label="Status" size="sm" value={form.status} onChange={(e) => set('status', e.target.value)}>{SITE_VISIT_STATUSES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</Select>
+        {role !== 'agent' && <Select label="Assigned agent" size="sm" value={form.assigned_agent} onChange={(e) => set('assigned_agent', e.target.value)}><option value="">Unassigned</option>{agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.full_name}</option>)}</Select>}
+      </div>
+      {form.status === 'completed' && <Textarea label="Outcome" rows={2} value={form.outcome} onChange={(e) => set('outcome', e.target.value)} />}
+      {form.status === 'cancelled' && <Textarea label="Cancellation reason" rows={2} value={form.cancellation_reason} onChange={(e) => set('cancellation_reason', e.target.value)} required />}
+      <Textarea label="Notes" rows={2} value={form.notes} onChange={(e) => set('notes', e.target.value)} />
+      <div className="flex justify-end gap-2"><Button type="button" size="sm" variant="outlined" onClick={() => setEditing(false)}>Cancel</Button><Button type="submit" size="sm" loading={update.isPending}>Save</Button></div>
+    </form>
+  )
+}
+
+function toLocalDateTime(value) {
+  if (!value) return ''
+  const date = new Date(value)
+  const offset = date.getTimezoneOffset() * 60000
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16)
 }
 
 function DrawerSection({ title, children }) {

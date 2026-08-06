@@ -1,16 +1,20 @@
 import axios from 'axios'
 import { useAuthStore } from '@/store/authStore'
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL
-console.log('BASE_URL',BASE_URL)
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '')
 const REFRESH_URL = '/auth/token/refresh/'
+
+const defaultHeaders = {
+  'Content-Type': 'application/json',
+}
+
+if (import.meta.env.VITE_NGROK_SKIP_WARNING === 'true') {
+  defaultHeaders['ngrok-skip-browser-warning'] = 'true'
+}
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-    "ngrok-skip-browser-warning": "true",
-  },
+  headers: defaultHeaders,
   timeout: 15000,
 })
 

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MapPin, Bed, Bath, Maximize2, MoreVertical, Heart, Eye, PhoneCall, Building2, Layers } from 'lucide-react'
+import { MapPin, Bed, Bath, Maximize2, MoreVertical, Heart, Eye, PhoneCall, Layers } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/cn'
 import Avatar from '@/components/ui/Avatar'
@@ -8,20 +8,16 @@ import { useDeleteProperty } from '@/hooks/useDeleteProperty'
 
 // ── Status config ─────────────────────────────────────────────
 const STATUS_CONFIG = {
-  active:   { label: 'Active',   variant: 'success' },
-  sold:     { label: 'Sold',     variant: 'error' },
-  pending:  { label: 'Pending',  variant: 'warning' },
-  draft:    { label: 'Draft',    variant: 'neutral' },
-  inactive: { label: 'Inactive', variant: 'neutral' },
+  draft:             { label: 'Draft',             variant: 'neutral' },
+  available:         { label: 'Available',         variant: 'success' },
+  under_negotiation: { label: 'Under Negotiation', variant: 'warning' },
+  sold:              { label: 'Sold',              variant: 'error' },
+  rented:            { label: 'Rented',            variant: 'info' },
+  hidden:            { label: 'Hidden',            variant: 'neutral' },
+  archived:          { label: 'Archived',          variant: 'neutral' },
 }
 
 // ── Purpose pill ──────────────────────────────────────────────
-const PURPOSE_CONFIG = {
-  sale:  { label: 'For Sale', cls: 'bg-[#496B5A] text-white' },
-  rent:  { label: 'For Rent', cls: 'bg-[#6FAFA8] text-white' },
-  lease: { label: 'Lease',    cls: 'bg-[#8FAF9B] text-white' },
-}
-
 // ── Price formatter ───────────────────────────────────────────
 function formatPrice(price, purpose) {
   const n = Number(price)
@@ -33,13 +29,6 @@ function formatPrice(price, purpose) {
 }
 
 // ── Property type icons ───────────────────────────────────────
-function PropertyTypeIcon({ type }) {
-  if (type === 'commercial') return <Building2 size={13} />
-  if (type === 'land')       return <Maximize2 size={13} />
-  if (type === 'apartment')  return <Layers size={13} />
-  return <Building2 size={13} />
-}
-
 export default function PropertyCard({ property, view = 'grid' }) {
   const [liked, setLiked] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -52,11 +41,10 @@ export default function PropertyCard({ property, view = 'grid' }) {
   const imageUrl = primaryMedia?.file || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600&q=80'
 
   const status  = STATUS_CONFIG[property.status] || { label: property.status, variant: 'neutral' }
-  const purpose = PURPOSE_CONFIG[property.purpose] || PURPOSE_CONFIG.sale
   const isCommercial = property.property_type === 'commercial'
 
   if (view === 'list') {
-    return <PropertyListRow property={property} status={status} purpose={purpose} imageUrl={imageUrl} liked={liked} setLiked={setLiked} />
+    return <PropertyListRow property={property} status={status} imageUrl={imageUrl} liked={liked} setLiked={setLiked} />
   }
 
   return (
@@ -178,7 +166,7 @@ export default function PropertyCard({ property, view = 'grid' }) {
 }
 
 // ── List view row ─────────────────────────────────────────────
-function PropertyListRow({ property, status, purpose, imageUrl, liked, setLiked }) {
+function PropertyListRow({ property, status, imageUrl, liked, setLiked }) {
   const isCommercial = property.property_type === 'commercial'
 
   return (

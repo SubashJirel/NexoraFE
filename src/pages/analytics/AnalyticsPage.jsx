@@ -1,4 +1,15 @@
-import ComingSoon from '@/components/shared/ComingSoon'
+import { useQuery } from '@tanstack/react-query'
+import { CircleDollarSign, ClipboardCheck, Home, Trophy, Users } from 'lucide-react'
+import operationsService from '@/services/operationsService'
+import { Card } from '@/components/ui/Card'
+import { PageSpinner } from '@/components/ui/Spinner'
+
 export default function AnalyticsPage() {
-  return <ComingSoon title="Analytics" description="Advanced analytics and reporting — coming soon." />
+  const query = useQuery({ queryKey: ['operations-report'], queryFn: operationsService.report })
+  if (query.isLoading) return <PageSpinner />
+  if (query.isError) return <Card><p className="text-red-600">Unable to load reports.</p></Card>
+  const data = query.data; const totals = data.totals
+  return <div className="space-y-6"><div><h2 className="text-2xl font-bold text-[#263238]">Reports & analytics</h2><p className="mt-1 text-sm text-[#637079]">Pipeline value, conversions, lead acquisition, open work, commissions, and agent performance.</p></div><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5"><Metric icon={Users} label="Leads" value={totals.leads} /><Metric icon={Home} label="Properties" value={totals.properties} /><Metric icon={Trophy} label="Won deals" value={totals.won_deals} /><Metric icon={CircleDollarSign} label="Won value" value={`NPR ${Number(totals.won_value).toLocaleString()}`} /><Metric icon={ClipboardCheck} label="Open tasks" value={totals.open_tasks} /></div><div className="grid gap-6 lg:grid-cols-2"><Distribution title="Deal pipeline" rows={data.pipeline} labelKey="stage" valueKey="count" /><Distribution title="Lead sources" rows={data.lead_sources} labelKey="source" valueKey="count" /></div><Card><h3 className="font-bold">Agent performance</h3><div className="mt-4 overflow-x-auto"><table className="w-full min-w-[620px] text-sm"><thead><tr className="text-left text-xs uppercase text-[#637079]"><th className="pb-3">Agent</th><th className="pb-3">Deals</th><th className="pb-3">Pipeline value</th><th className="pb-3">Commission</th></tr></thead><tbody>{data.agent_performance.map((row) => <tr key={row.assigned_agent__id || 'unassigned'} className="border-t border-[#EEF2F2]"><td className="py-4 font-semibold">{row.assigned_agent__full_name || 'Unassigned'}</td><td className="py-4">{row.count}</td><td className="py-4">NPR {Number(row.value || 0).toLocaleString()}</td><td className="py-4">NPR {Number(row.commission || 0).toLocaleString()}</td></tr>)}</tbody></table></div></Card></div>
 }
+function Metric({ icon: Icon, label, value }) { return <Card className="flex items-center gap-3"><span className="rounded-xl bg-[#eef3f0] p-3 text-[#496B5A]"><Icon size={18} /></span><div><p className="text-xl font-black">{value}</p><p className="text-xs text-[#637079]">{label}</p></div></Card> }
+function Distribution({ title, rows, labelKey, valueKey }) { const max = Math.max(...rows.map((row) => row[valueKey]), 1); return <Card><h3 className="font-bold">{title}</h3><div className="mt-5 space-y-4">{rows.map((row) => <div key={row[labelKey]}><div className="mb-1 flex justify-between text-xs"><span className="capitalize text-[#637079]">{row[labelKey].replaceAll('_', ' ')}</span><b>{row[valueKey]}</b></div><div className="h-2 rounded-full bg-[#EEF2F2]"><div className="h-2 rounded-full bg-[#496B5A]" style={{ width: `${row[valueKey] / max * 100}%` }} /></div></div>)}</div></Card> }

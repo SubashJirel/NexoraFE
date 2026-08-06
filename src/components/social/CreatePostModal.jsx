@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { X, ImagePlus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import Button from '@/components/ui/Button'
 import Textarea from '@/components/ui/Textarea'
 import Select from '@/components/ui/Select'
+import Input from '@/components/ui/Input'
 import { useCreateSocialPost, useUpdateSocialPost } from '@/hooks/useCreateSocialPost'
 
 // ── helpers ───────────────────────────────────────────────────
@@ -11,6 +12,15 @@ import { useCreateSocialPost, useUpdateSocialPost } from '@/hooks/useCreateSocia
 function platformLabel(platform) {
   const map = { facebook: 'Facebook', instagram: 'Instagram' }
   return map[platform?.toLowerCase()] ?? platform
+}
+
+function toLocalDateTimeValue(value) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16)
 }
 
 function PlatformIcon({ platform, size = 16 }) {
@@ -137,33 +147,21 @@ function ImageDropZone({ file, existingUrl, onFile, onClear }) {
  * @param {Array}    connections - connected social accounts (create mode)
  * @param {Object}   [post]      - existing post to edit (edit mode)
  */
-export default function CreatePostModal({ open, onClose, connections = [], post }) {
+export default function CreatePostModal(props) {
+  if (!props.open) return null
+  return <PostFormModal key={props.post?.id ?? 'new-post'} {...props} />
+}
+
+function PostFormModal({ onClose, connections = [], post }) {
   const isEditMode = Boolean(post)
 
   // ── form state ──────────────────────────────────────────────
-  const [accountId, setAccountId] = useState('')
-  const [caption,   setCaption]   = useState('')
-  const [status,    setStatus]    = useState('draft')
+  const [accountId, setAccountId] = useState(() => String(post?.social_account ?? ''))
+  const [caption, setCaption] = useState(() => post?.caption ?? '')
+  const [status, setStatus] = useState(() => post?.status ?? 'draft')
+  const [scheduledAt, setScheduledAt] = useState(() => toLocalDateTimeValue(post?.scheduled_at))
   const [image,     setImage]     = useState(null)   // new File picked by user
   const [clearImg,  setClearImg]  = useState(false)  // user explicitly removed existing image
-
-  // Seed form when opening in edit mode (or when `post` changes)
-  useEffect(() => {
-    if (!open) return
-    if (isEditMode) {
-      setAccountId(String(post.social_account ?? ''))
-      setCaption(post.caption ?? '')
-      setStatus(post.status ?? 'draft')
-      setImage(null)
-      setClearImg(false)
-    } else {
-      setAccountId('')
-      setCaption('')
-      setStatus('draft')
-      setImage(null)
-      setClearImg(false)
-    }
-  }, [open, post, isEditMode])
 
   // ── mutations ───────────────────────────────────────────────
   const { mutate: createPost, isPending: isCreating } = useCreateSocialPost({
@@ -198,26 +196,28 @@ export default function CreatePostModal({ open, onClose, connections = [], post 
     e.preventDefault()
 
     if (isEditMode) {
+      if (status === 'scheduled' && !scheduledAt) return
       updatePost({
         id: post.id,
         caption,
         status,
+        scheduled_at: status === 'scheduled' ? new Date(scheduledAt).toISOString() : null,
         // only send image if user picked a new one
         ...(image instanceof File ? { image } : {}),
       })
     } else {
       if (!accountId) return
+      if (status === 'scheduled' && !scheduledAt) return
       createPost({
         social_account: Number(accountId),
         platform: selectedAccount?.platform ?? 'facebook',
         caption,
         status,
+        scheduled_at: status === 'scheduled' ? new Date(scheduledAt).toISOString() : undefined,
         image: image ?? undefined,
       })
     }
   }
-
-  if (!open) return null
 
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
@@ -345,6 +345,17 @@ export default function CreatePostModal({ open, onClose, connections = [], post 
             <option value="draft">Draft — save without publishing</option>
             <option value="scheduled">Scheduled — publish later</option>
           </Select>
+
+          {status === 'scheduled' && (
+            <Input
+              label="Publish date and time"
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={(event) => setScheduledAt(event.target.value)}
+              min={toLocalDateTimeValue(new Date())}
+              required
+            />
+          )}
         </form>
 
         {/* footer */}

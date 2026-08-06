@@ -3,6 +3,7 @@ import {
   getLeads, createLead, updateLead, deleteLead,
   getInteractions, createInteraction, deleteInteraction,
   getInterests, createInterest, deleteInterest,
+  getLeadTimeline, completeLeadFollowUp,
 } from '@/services/leadService'
 import toast from 'react-hot-toast'
 
@@ -10,6 +11,7 @@ import toast from 'react-hot-toast'
 export const LEADS_KEY              = ['leads']
 export const INTERACTIONS_KEY = (id) => ['leads', id, 'interactions']
 export const INTERESTS_KEY    = (id) => ['leads', id, 'interests']
+export const TIMELINE_KEY     = (id) => ['leads', id, 'timeline']
 
 // ── Leads ─────────────────────────────────────────────────────
 
@@ -94,7 +96,7 @@ export function useCreateInteraction(leadId, { onSuccess } = {}) {
 export function useDeleteInteraction(leadId, interactionId, { onSuccess } = {}) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: () => deleteInteraction(leadId, interactionId),
+    mutationFn: () => deleteInteraction(interactionId),
     onSuccess: () => {
       qc.setQueryData(INTERACTIONS_KEY(leadId), (old = []) =>
         old.filter((i) => String(i.id) !== String(interactionId))
@@ -132,7 +134,7 @@ export function useCreateInterest(leadId, { onSuccess } = {}) {
 export function useDeleteInterest(leadId, interestId, { onSuccess } = {}) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: () => deleteInterest(leadId, interestId),
+    mutationFn: () => deleteInterest(interestId),
     onSuccess: () => {
       qc.setQueryData(INTERESTS_KEY(leadId), (old = []) =>
         old.filter((i) => String(i.id) !== String(interestId))
@@ -140,6 +142,31 @@ export function useDeleteInterest(leadId, interestId, { onSuccess } = {}) {
       onSuccess?.()
     },
     onError: (err) => toast.error(_msg(err, 'Failed to delete interest.')),
+  })
+}
+
+export function useLeadTimeline(leadId) {
+  return useQuery({
+    queryKey: TIMELINE_KEY(leadId),
+    queryFn: () => getLeadTimeline(leadId),
+    enabled: Boolean(leadId),
+  })
+}
+
+export function useCompleteLeadFollowUp(leadId, { onSuccess } = {}) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload) => completeLeadFollowUp(leadId, payload),
+    onSuccess: (lead) => {
+      qc.setQueryData(LEADS_KEY, (old = []) =>
+        old.map((item) => String(item.id) === String(lead.id) ? lead : item)
+      )
+      qc.invalidateQueries({ queryKey: TIMELINE_KEY(leadId) })
+      qc.invalidateQueries({ queryKey: INTERACTIONS_KEY(leadId) })
+      toast.success('Follow-up completed.')
+      onSuccess?.(lead)
+    },
+    onError: (err) => toast.error(_msg(err, 'Failed to complete follow-up.')),
   })
 }
 

@@ -1,19 +1,23 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Bath, Bed, Building2, CalendarDays, CheckCircle2, Clock3, Eye, Home, Layers, MapPin, Maximize2, PhoneCall, Share2, SquareAsterisk, Tag, Trash2, Trash } from 'lucide-react'
+import { ArrowLeft, Bath, Bed, Building2, CalendarDays, CheckCircle2, Clock3, Eye, Home, Layers, MapPin, Maximize2, Pencil, PhoneCall, Share2, SquareAsterisk, Star, Tag, Trash2, Trash, X } from 'lucide-react'
 import { useProperty } from '@/hooks/useProperties'
 import { useDeletePropertyMedia } from '@/hooks/useDeletePropertyMedia'
 import { useDeleteProperty } from '@/hooks/useDeleteProperty'
+import { useUpdatePropertyMedia } from '@/hooks/useUpdatePropertyMedia'
+import { useUploadPropertyMedia } from '@/hooks/useUploadPropertyMedia'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import { PageSpinner } from '@/components/ui/Spinner'
 
 const STATUS_CONFIG = {
-  active: { label: 'Active', variant: 'success' },
-  pending: { label: 'Pending', variant: 'warning' },
   draft: { label: 'Draft', variant: 'neutral' },
+  available: { label: 'Available', variant: 'success' },
+  under_negotiation: { label: 'Under Negotiation', variant: 'warning' },
   sold: { label: 'Sold', variant: 'error' },
-  inactive: { label: 'Inactive', variant: 'neutral' },
+  rented: { label: 'Rented', variant: 'info' },
+  hidden: { label: 'Hidden', variant: 'neutral' },
+  archived: { label: 'Archived', variant: 'neutral' },
 }
 
 const PURPOSE_CONFIG = {
@@ -30,6 +34,9 @@ export default function PropertyDetailsPage() {
   const { mutate: deleteProperty, isPending: isDeletingProperty } = useDeleteProperty(id, {
     onSuccess: () => navigate('/properties'),
   })
+  const updateMedia = useUpdatePropertyMedia(id)
+  const uploadMedia = useUploadPropertyMedia(id)
+  const [editingMedia, setEditingMedia] = useState(null)
 
   const primaryMedia = useMemo(() => {
     if (!property?.media?.length) return null
@@ -66,6 +73,15 @@ export default function PropertyDetailsPage() {
     deleteProperty()
   }
 
+  async function handleShare() {
+    const shareData = { title: property.title, text: property.short_description || property.title, url: window.location.href }
+    if (navigator.share) await navigator.share(shareData)
+    else {
+      await navigator.clipboard.writeText(window.location.href)
+      window.alert('Property link copied to clipboard.')
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -93,7 +109,7 @@ export default function PropertyDetailsPage() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <Button variant="outlined" size="md" leftIcon={<Share2 size={15} />}>
+          <Button variant="outlined" size="md" leftIcon={<Share2 size={15} />} onClick={handleShare}>
             Share
           </Button>
           <Button
@@ -200,13 +216,16 @@ export default function PropertyDetailsPage() {
           </section>
 
           <section className="rounded-2xl border border-[#DDE5E3] bg-white p-5 sm:p-6 space-y-4">
-            <SectionTitle icon={<Clock3 size={16} />} title="Media" />
+            <div className="flex items-center justify-between gap-3"><SectionTitle icon={<Clock3 size={16} />} title="Media" /><label className="cursor-pointer rounded-lg bg-[#eef3f0] px-3 py-2 text-xs font-semibold text-[#496B5A]">{uploadMedia.isPending ? 'Uploading...' : 'Upload media'}<input type="file" accept="image/*,video/mp4,application/pdf" className="hidden" disabled={uploadMedia.isPending} onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadMedia.mutate(file); event.target.value = '' }} /></label></div>
             {property.media?.length ? (
               <div className="grid grid-cols-2 gap-3">
                 {property.media.map((mediaItem, index) => (
                   <div key={mediaItem.id || index} className="group relative overflow-hidden rounded-xl border border-[#DDE5E3] bg-[#F8FAFA]">
                     <img src={mediaItem.file} alt={mediaItem.title || `${property.title} media ${index + 1}`} className="h-28 w-full object-cover" />
-                    <div className="absolute inset-0 flex items-start justify-end p-2 opacity-0 transition-opacity group-hover:opacity-100">
+                    {mediaItem.is_primary && <span className="absolute left-2 top-2 rounded-full bg-amber-400 px-2 py-0.5 text-[9px] font-bold">Primary</span>}
+                    <div className="absolute inset-0 flex items-start justify-end gap-1 bg-black/20 p-2 opacity-0 transition-opacity group-hover:opacity-100">
+                      {!mediaItem.is_primary && <Button type="button" variant="secondary" size="icon" className="h-8 w-8" onClick={() => updateMedia.mutate({ mediaId: mediaItem.id, payload: { is_primary: true } })} aria-label="Set primary"><Star size={13} /></Button>}
+                      <Button type="button" variant="outlined" size="icon" className="h-8 w-8 bg-white" onClick={() => setEditingMedia(mediaItem)} aria-label="Edit media"><Pencil size={13} /></Button>
                       <Button
                         type="button"
                         variant="danger"
@@ -225,11 +244,17 @@ export default function PropertyDetailsPage() {
             ) : (
               <p className="text-sm text-[#637079]">No media uploaded for this property yet.</p>
             )}
+            {editingMedia && <MediaEditDialog media={editingMedia} onClose={() => setEditingMedia(null)} onSave={(payload) => updateMedia.mutate({ mediaId: editingMedia.id, payload }, { onSuccess: () => setEditingMedia(null) })} isSaving={updateMedia.isPending} />}
           </section>
         </aside>
       </div>
     </div>
   )
+}
+
+function MediaEditDialog({ media, onClose, onSave, isSaving }) {
+  const [form, setForm] = useState({ title: media.title || '', caption: media.caption || '', sort_order: media.sort_order ?? 0, is_primary: Boolean(media.is_primary) })
+  return <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/40 p-4" onClick={onClose}><form onSubmit={(event) => { event.preventDefault(); onSave({ ...form, sort_order: Number(form.sort_order) }) }} onClick={(event) => event.stopPropagation()} className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-2xl"><div className="flex items-center justify-between"><div><h3 className="font-semibold text-[#263238]">Edit media</h3><p className="text-xs text-[#637079]">Update display order and descriptive metadata.</p></div><button type="button" onClick={onClose}><X size={17} /></button></div><label className="block text-sm font-medium text-[#263238]">Title<input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} className="mt-1.5 h-10 w-full rounded-lg border border-[#DDE5E3] px-3 text-sm outline-none focus:border-[#496B5A]" /></label><label className="block text-sm font-medium text-[#263238]">Caption<textarea value={form.caption} onChange={(event) => setForm((current) => ({ ...current, caption: event.target.value }))} rows="3" className="mt-1.5 w-full rounded-lg border border-[#DDE5E3] px-3 py-2 text-sm outline-none focus:border-[#496B5A]" /></label><label className="block text-sm font-medium text-[#263238]">Sort order<input type="number" value={form.sort_order} onChange={(event) => setForm((current) => ({ ...current, sort_order: event.target.value }))} className="mt-1.5 h-10 w-full rounded-lg border border-[#DDE5E3] px-3 text-sm" /></label><label className="flex items-center gap-2 text-sm text-[#263238]"><input type="checkbox" checked={form.is_primary} onChange={(event) => setForm((current) => ({ ...current, is_primary: event.target.checked }))} />Use as primary image</label><div className="flex justify-end gap-2"><Button type="button" variant="outlined" onClick={onClose}>Cancel</Button><Button type="submit" loading={isSaving}>Save media</Button></div></form></div>
 }
 
 function SectionTitle({ icon, title }) {

@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button'
 import { useCreateLead, useUpdateLead } from '@/hooks/useLeads'
 import { useAgents } from '@/hooks/useAgents'
 import { LEAD_SOURCES, PROPERTY_TYPES, PURPOSES, LEAD_STATUSES } from '../leadsConstants'
+import { useResource } from '@/hooks/useOperations'
 
 const EMPTY = {
   full_name:          '',
@@ -21,11 +22,18 @@ const EMPTY = {
   purpose:            'sale',
   property_type:      'house',
   notes:              '',
+  custom_data:        {},
 }
 
 export default function LeadFormModal({ lead, onClose }) {
   const isEdit = Boolean(lead)
   const { data: agents = [] } = useAgents()
+  const customFields = useResource('custom-fields', { module: 'lead' })
+  const customStages = useResource('pipeline-stages', { module: 'lead' })
+  const leadStatuses = [
+    ...LEAD_STATUSES,
+    ...(customStages.data || []).filter((item) => !LEAD_STATUSES.some((status) => status.value === item.key)).map((item) => ({ value: item.key, label: item.name })),
+  ]
 
   const [form, setForm] = useState(
     isEdit
@@ -42,6 +50,7 @@ export default function LeadFormModal({ lead, onClose }) {
           purpose:            lead.purpose            ?? 'sale',
           property_type:      lead.property_type      ?? 'house',
           notes:              lead.notes              ?? '',
+          custom_data:        lead.custom_data        ?? {},
         }
       : EMPTY
   )
@@ -163,7 +172,7 @@ export default function LeadFormModal({ lead, onClose }) {
                   onChange={(e) => set('status', e.target.value)}
                   disabled={isPending}
                 >
-                  {LEAD_STATUSES.map((s) => (
+                  {leadStatuses.map((s) => (
                     <option key={s.value} value={s.value}>{s.label}</option>
                   ))}
                 </Select>
@@ -180,6 +189,8 @@ export default function LeadFormModal({ lead, onClose }) {
                 </Select>
               </div>
             </Section>
+
+            {(customFields.data || []).length > 0 && <Section title="Custom Fields"><div className="grid grid-cols-1 gap-4 sm:grid-cols-2">{customFields.data.filter((field) => field.is_active).map((field) => <CustomLeadField key={field.key} field={field} value={form.custom_data?.[field.key]} onChange={(value) => set('custom_data', { ...(form.custom_data || {}), [field.key]: value })} />)}</div></Section>}
 
             {/* ── Property requirement ── */}
             <Section title="Property Requirement">
@@ -257,6 +268,13 @@ export default function LeadFormModal({ lead, onClose }) {
       </div>
     </ModalOverlay>
   )
+}
+
+function CustomLeadField({ field, value = '', onChange }) {
+  if (field.field_type === 'boolean') return <label className="flex items-center gap-2 pt-6 text-sm"><input type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} />{field.label}</label>
+  if (field.field_type === 'select') return <Select label={field.label} value={value} onChange={(e) => onChange(e.target.value)} required={field.is_required}><option value="">Select…</option>{(field.options || []).map((option) => <option key={option} value={option}>{option}</option>)}</Select>
+  if (field.field_type === 'multiselect') return <label className="text-xs font-medium">{field.label}<select multiple className="mt-1 min-h-24 w-full rounded-lg border border-[#DDE5E3] p-2" value={Array.isArray(value) ? value : []} onChange={(e) => onChange([...e.target.selectedOptions].map((option) => option.value))}>{(field.options || []).map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
+  return <Input label={field.label} type={field.field_type === 'number' ? 'number' : field.field_type === 'date' ? 'date' : 'text'} value={value} onChange={(e) => onChange(e.target.value)} required={field.is_required} />
 }
 
 function Section({ title, children }) {
