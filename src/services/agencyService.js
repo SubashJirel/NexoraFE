@@ -10,6 +10,7 @@ export async function updateCurrentAgency(payload) {
 
   Object.entries(payload).forEach(([key, value]) => {
     if (value instanceof File) form.append(key, value)
+    else if (typeof value === 'object' && value !== null) form.append(key, JSON.stringify(value))
     else if (value !== undefined && value !== null) form.append(key, value)
   })
 

@@ -42,6 +42,7 @@ npm run build
 - Smart matching, property comparison, configurable fields/pipelines, and audit logs
 - Stripe subscription checkout and billing management
 - Customer portal, saved listings/search alerts, map search, and SEO share URLs
+- Website publishing controls, reusable storefront content, inbound website submissions, and agent-review moderation
 - Super-admin platform and agency controls
 
 Public storefront URLs use `/agency/:slug`, with canonical listing pages at `/agency/:slug/listings/:shareSlug`, a customer portal at `/agency/:slug/portal`, and map search at `/agency/:slug/map`.
@@ -52,3 +53,4 @@ Public storefront URLs use `/agency/:slug`, with canonical listing pages at `/ag
 - Configure SPA history fallback so browser refreshes resolve to `index.html`.
 - Serve the generated `dist/` directory through a CDN or static host.
 - Configure `VITE_PAYMENT_URL` and `VITE_SUPPORT_EMAIL` for agency activation.
+- Set `VITE_STOREFRONT_URL` to the standalone Next.js storefront origin for website previews.

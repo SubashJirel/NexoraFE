@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Building2, CheckCircle2, Clock3, CreditCard, Image, Link2, MapPin } from 'lucide-react'
+import { Building2, CheckCircle2, Clock3, CreditCard, Globe2, Image, Link2, MapPin } from 'lucide-react'
 import { useCurrentAgency, useUpdateAgency } from '@/hooks/useAgency'
 import { useAuthStore } from '@/store/authStore'
 import { Card } from '@/components/ui/Card'
@@ -42,6 +42,21 @@ function AgencySettingsForm({ agency }) {
     linkedin_url: agency.linkedin_url || '',
     whatsapp_number: agency.whatsapp_number || '',
     viber_number: agency.viber_number || '',
+    seo_title: agency.seo_title || '',
+    seo_description: agency.seo_description || '',
+    custom_domain: agency.custom_domain || '',
+    website_template: agency.website_template || 'luxury-agency',
+    is_website_published: agency.is_website_published ?? true,
+    website_config: {
+      hero_eyebrow: agency.website_config?.hero_eyebrow || '',
+      hero_title: agency.website_config?.hero_title || '',
+      hero_subtitle: agency.website_config?.hero_subtitle || '',
+      mission: agency.website_config?.mission || '',
+      story: agency.website_config?.story || '',
+      statistics: agency.website_config?.statistics || [],
+      testimonials: agency.website_config?.testimonials || [],
+      faqs: agency.website_config?.faqs || [],
+    },
     logo: null,
     cover_image: null,
   }))
@@ -49,6 +64,11 @@ function AgencySettingsForm({ agency }) {
   function set(field, value) {
     setForm((current) => ({ ...current, [field]: value }))
   }
+
+  function setWebsite(field, value) {
+    setForm((current) => ({ ...current, website_config: { ...current.website_config, [field]: value } }))
+  }
+
 
   function submit(event) {
     event.preventDefault()
@@ -63,7 +83,7 @@ function AgencySettingsForm({ agency }) {
           <p className="mt-1 text-sm text-[#637079]">Manage your public identity, contact information, and subscription.</p>
         </div>
         <div className="flex gap-2">
-          <a href={`/agency/${agency.slug}`} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg border border-[#496B5A] px-4 text-sm font-semibold text-[#496B5A] hover:bg-[#eef3f0]">Preview public site</a>
+          <a href={`${import.meta.env.VITE_STOREFRONT_URL || 'http://localhost:3000'}/agency/${agency.slug}`} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg border border-[#496B5A] px-4 text-sm font-semibold text-[#496B5A] hover:bg-[#eef3f0]">Preview public site</a>
           <Button type="submit" loading={mutation.isPending}>Save changes</Button>
         </div>
       </div>
@@ -94,6 +114,21 @@ function AgencySettingsForm({ agency }) {
               <div className="sm:col-span-3">
                 <Input label="Address" value={form.address} onChange={(e) => set('address', e.target.value)} />
               </div>
+            </div>
+          </SettingsCard>
+
+          <SettingsCard icon={Globe2} title="Public website" description="Publish and customize the SEO storefront rendered by the selected template.">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="text-sm font-medium text-[#263238]">Template<select value={form.website_template} onChange={(e) => set('website_template', e.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#DDE5E3] px-3"><option value="luxury-agency">Luxury agency</option></select></label>
+              <label className="flex items-center gap-2 self-end rounded-lg border border-[#DDE5E3] px-3 py-2 text-sm"><input type="checkbox" checked={form.is_website_published} onChange={(e) => set('is_website_published', e.target.checked)} />Website published</label>
+              <Input label="Custom domain" value={form.custom_domain} onChange={(e) => set('custom_domain', e.target.value)} placeholder="homes.example.com" />
+              <Input label="SEO title" value={form.seo_title} onChange={(e) => set('seo_title', e.target.value)} maxLength={70} />
+              <div className="sm:col-span-2"><Textarea label="SEO description" rows={3} value={form.seo_description} onChange={(e) => set('seo_description', e.target.value)} maxLength={180} /></div>
+              <Input label="Hero eyebrow" value={form.website_config.hero_eyebrow} onChange={(e) => setWebsite('hero_eyebrow', e.target.value)} />
+              <Input label="Hero title" value={form.website_config.hero_title} onChange={(e) => setWebsite('hero_title', e.target.value)} />
+              <div className="sm:col-span-2"><Textarea label="Hero subtitle" rows={3} value={form.website_config.hero_subtitle} onChange={(e) => setWebsite('hero_subtitle', e.target.value)} /></div>
+              <div className="sm:col-span-2"><Textarea label="Mission" rows={4} value={form.website_config.mission} onChange={(e) => setWebsite('mission', e.target.value)} /></div>
+              <div className="sm:col-span-2"><Textarea label="Story" rows={4} value={form.website_config.story} onChange={(e) => setWebsite('story', e.target.value)} /></div>
             </div>
           </SettingsCard>
 

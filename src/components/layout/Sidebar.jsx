@@ -24,6 +24,8 @@ import {
   Share2,
   UserCircle,
   UserCheck,
+  Globe2,
+  Star,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useUIStore } from '@/store/uiStore'
@@ -68,7 +70,12 @@ const NAV_ITEMS = [
   },
   {
     group: 'Marketing',
-    items: [{ label: 'Social Media', to: '/social-media', icon: Share2 }],
+    items: [
+      { label: 'Social Media', to: '/social-media', icon: Share2 },
+      { label: 'Website Content', to: '/website-content', icon: Globe2, roles: ['agency_owner', 'agency_manager', 'super_admin'] },
+      { label: 'Web Submissions', to: '/website-submissions', icon: MessageCircle },
+      { label: 'Agent Reviews', to: '/agent-reviews', icon: Star, roles: ['agency_owner', 'agency_manager', 'super_admin'] },
+    ],
   },
   {
     group: 'Reports',
