@@ -121,6 +121,14 @@ export default function Step4Media({ files, onChange, form, onFormChange, allowM
           hint="Optional — link to a 360° tour or video walkthrough"
         />
       </div>
+      <Input
+        label="Video Tour URL"
+        type="url"
+        placeholder="https://youtube.com/..."
+        value={form.video_tour_url}
+        onChange={(e) => onFormChange('video_tour_url', e.target.value)}
+        hint="Optional hosted walkthrough or presentation video"
+      />
     </div>
   )
 }

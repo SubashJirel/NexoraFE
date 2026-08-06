@@ -24,7 +24,7 @@ export async function getSocialConnections() {
  * Disconnect a social account.
  */
 export async function deleteSocialConnection(id) {
-  await apiClient.delete(`/social-posts/connections/${id}/`)
+  await apiClient.delete(`/social-posts/accounts/${id}/disconnect/`)
 }
 
 /**

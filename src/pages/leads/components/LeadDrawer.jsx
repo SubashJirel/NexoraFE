@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   X, Phone, Mail, MapPin, Home, DollarSign,
   MessageSquare, Star, Plus, Trash2, Calendar,
-  User, Tag, ChevronRight,
+  User, Tag, ChevronRight, History, CheckCircle2,
 } from 'lucide-react'
 import Avatar from '@/components/ui/Avatar'
 import Badge from '@/components/ui/Badge'
@@ -15,6 +15,7 @@ import {
   useInteractions, useCreateInteraction, useDeleteInteraction,
   useInterests,    useCreateInterest,    useDeleteInterest,
   useUpdateLead,
+  useLeadTimeline, useCompleteLeadFollowUp,
 } from '@/hooks/useLeads'
 import {
   STATUS_MAP, LEAD_STATUSES, INTERACTION_TYPES,
@@ -24,7 +25,7 @@ import { cn } from '@/lib/cn'
 
 // ── Drawer shell ──────────────────────────────────────────────
 export default function LeadDrawer({ lead, onClose, onEdit }) {
-  const [tab, setTab] = useState('overview') // overview | interactions | interests
+  const [tab, setTab] = useState('overview')
 
   return (
     <>
@@ -74,6 +75,7 @@ export default function LeadDrawer({ lead, onClose, onEdit }) {
             { id: 'overview',     label: 'Overview'     },
             { id: 'interactions', label: 'Interactions' },
             { id: 'interests',    label: 'Interests'    },
+            { id: 'timeline',     label: 'Timeline'     },
           ].map((t) => (
             <button
               key={t.id}
@@ -95,6 +97,7 @@ export default function LeadDrawer({ lead, onClose, onEdit }) {
           {tab === 'overview'     && <OverviewTab     lead={lead} />}
           {tab === 'interactions' && <InteractionsTab lead={lead} />}
           {tab === 'interests'    && <InterestsTab    lead={lead} />}
+          {tab === 'timeline'     && <TimelineTab     lead={lead} />}
         </div>
       </div>
     </>
@@ -104,7 +107,9 @@ export default function LeadDrawer({ lead, onClose, onEdit }) {
 // ── Status stepper ────────────────────────────────────────────
 function StatusStepper({ lead }) {
   const updateMutation = useUpdateLead(lead.id)
-  const pipeline = ['new', 'contacted', 'interested', 'site_visit', 'negotiation', 'closed']
+  const pipeline = LEAD_STATUSES
+    .filter((status) => !['lost', 'follow_up_later', 'archived'].includes(status.value))
+    .map((status) => status.value)
   const currentIdx = pipeline.indexOf(lead.status)
 
   return (
@@ -493,6 +498,73 @@ function InterestCard({ item, leadId }) {
         >
           <Trash2 size={12} />
         </button>
+      </div>
+    </div>
+  )
+}
+
+function TimelineTab({ lead }) {
+  const { data, isLoading } = useLeadTimeline(lead.id)
+  const [showFollowUp, setShowFollowUp] = useState(false)
+
+  const timeline = [
+    ...(data?.interactions || []).map((item) => ({ ...item, kind: 'interaction', date: item.created_at })),
+    ...(data?.status_history || []).map((item) => ({ ...item, kind: 'status', date: item.created_at })),
+    ...(data?.site_visits || []).map((item) => ({ ...item, kind: 'visit', date: item.scheduled_at || item.created_at })),
+  ].sort((a, b) => new Date(b.date) - new Date(a.date))
+
+  return (
+    <div className="space-y-4 p-5">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-[#263238]">Complete history</p>
+          <p className="text-xs text-[#8b969d]">Interactions, status changes, and site visits.</p>
+        </div>
+        <Button size="sm" leftIcon={<CheckCircle2 size={13} />} onClick={() => setShowFollowUp((value) => !value)}>Complete follow-up</Button>
+      </div>
+
+      {showFollowUp && <CompleteFollowUpForm lead={lead} onDone={() => setShowFollowUp(false)} />}
+
+      {isLoading ? <div className="flex justify-center py-8"><Spinner /></div> : timeline.length ? (
+        <div className="space-y-0">
+          {timeline.map((item) => <TimelineItem key={`${item.kind}-${item.id}`} item={item} />)}
+        </div>
+      ) : <EmptyTab icon={History} text="No timeline activity yet." />}
+    </div>
+  )
+}
+
+function CompleteFollowUpForm({ lead, onDone }) {
+  const [form, setForm] = useState({ note: 'Follow-up completed.', interaction_type: 'call', next_follow_up_at: '' })
+  const mutation = useCompleteLeadFollowUp(lead.id, { onSuccess: onDone })
+  function submit(event) {
+    event.preventDefault()
+    mutation.mutate({ ...form, next_follow_up_at: form.next_follow_up_at ? new Date(form.next_follow_up_at).toISOString() : null })
+  }
+  return (
+    <form onSubmit={submit} className="space-y-3 rounded-xl border border-[#DDE5E3] bg-[#F8FAFA] p-4">
+      <div className="grid grid-cols-2 gap-3">
+        <Select label="Interaction" size="sm" value={form.interaction_type} onChange={(e) => setForm((value) => ({ ...value, interaction_type: e.target.value }))}>{INTERACTION_TYPES.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}</Select>
+        <Input label="Next follow-up" size="sm" type="datetime-local" value={form.next_follow_up_at} onChange={(e) => setForm((value) => ({ ...value, next_follow_up_at: e.target.value }))} />
+      </div>
+      <Textarea label="Completion note" rows={2} value={form.note} onChange={(e) => setForm((value) => ({ ...value, note: e.target.value }))} required />
+      <div className="flex justify-end gap-2"><Button type="button" size="sm" variant="outlined" onClick={onDone}>Cancel</Button><Button type="submit" size="sm" loading={mutation.isPending}>Complete</Button></div>
+    </form>
+  )
+}
+
+function TimelineItem({ item }) {
+  const config = {
+    interaction: { label: item.interaction_type, detail: item.note, color: 'bg-blue-500' },
+    status: { label: `${item.from_status || 'New'} → ${item.to_status}`, detail: item.note || `Changed by ${item.changed_by_name || 'system'}`, color: 'bg-amber-500' },
+    visit: { label: `Site visit: ${item.status}`, detail: item.property_title || `Property #${item.property}`, color: 'bg-[#496B5A]' },
+  }[item.kind]
+  return (
+    <div className="flex gap-3">
+      <div className="flex flex-col items-center"><span className={cn('mt-1 h-2.5 w-2.5 rounded-full', config.color)} /><span className="h-full w-px bg-[#DDE5E3]" /></div>
+      <div className="min-w-0 flex-1 pb-5">
+        <div className="flex items-start justify-between gap-2"><p className="text-xs font-semibold capitalize text-[#263238]">{config.label?.replaceAll('_', ' ')}</p><span className="shrink-0 text-[10px] text-[#8b969d]">{item.date ? new Date(item.date).toLocaleString() : ''}</span></div>
+        {config.detail && <p className="mt-1 text-xs leading-relaxed text-[#637079]">{config.detail}</p>}
       </div>
     </div>
   )

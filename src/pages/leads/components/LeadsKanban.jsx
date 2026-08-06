@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Phone, MapPin, MoreVertical } from 'lucide-react'
 import Avatar from '@/components/ui/Avatar'
 import Badge from '@/components/ui/Badge'
-import { cn } from '@/lib/cn'
 import { KANBAN_COLUMNS, STATUS_MAP, SOURCE_BADGE, formatBudget } from '../leadsConstants'
 
 export default function LeadsKanban({ leads, onCardClick, onEdit, onDelete }) {
@@ -22,7 +21,6 @@ export default function LeadsKanban({ leads, onCardClick, onEdit, onDelete }) {
         return (
           <KanbanColumn
             key={status}
-            status={status}
             label={info?.label ?? status}
             color={info?.color}
             leads={items}
@@ -36,7 +34,7 @@ export default function LeadsKanban({ leads, onCardClick, onEdit, onDelete }) {
   )
 }
 
-function KanbanColumn({ status, label, color, leads, onCardClick, onEdit, onDelete }) {
+function KanbanColumn({ label, color, leads, onCardClick, onEdit, onDelete }) {
   return (
     <div className="flex flex-col shrink-0 w-72">
       {/* Column header */}

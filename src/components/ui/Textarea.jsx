@@ -1,4 +1,4 @@
-import { forwardRef } from 'react'
+import { forwardRef, useId } from 'react'
 import { cn } from '@/lib/cn'
 
 /**
@@ -8,7 +8,8 @@ const Textarea = forwardRef(function Textarea(
   { label, hint, error, rows = 4, className, id, disabled, ...props },
   ref
 ) {
-  const inputId = id || `textarea-${Math.random().toString(36).slice(2, 9)}`
+  const generatedId = useId()
+  const inputId = id || `textarea-${generatedId}`
   const hasError = Boolean(error)
 
   return (

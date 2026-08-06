@@ -1,4 +1,4 @@
-import { forwardRef } from 'react'
+import { forwardRef, useId } from 'react'
 import { cn } from '@/lib/cn'
 
 /**
@@ -32,7 +32,8 @@ const Input = forwardRef(function Input(
   },
   ref
 ) {
-  const inputId = id || `input-${Math.random().toString(36).slice(2, 9)}`
+  const generatedId = useId()
+  const inputId = id || `input-${generatedId}`
   const hasError = Boolean(error)
 
   return (

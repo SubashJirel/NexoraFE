@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Plus, FileText, LayoutGrid, List, Search } from 'lucide-react'
+import { Plus, LayoutGrid, List, Search } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useProperties } from '@/hooks/useProperties'
 import PropertyCard from './components/PropertyCard'
@@ -63,14 +63,6 @@ export default function PropertiesPage() {
               <List size={15} />
             </ViewToggle>
           </div>
-
-          <Button
-            variant="outlined"
-            size="md"
-            leftIcon={<FileText size={15} />}
-          >
-            Export PDF
-          </Button>
 
           <Button
             variant="primary"

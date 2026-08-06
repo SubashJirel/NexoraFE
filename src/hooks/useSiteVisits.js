@@ -1,5 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSiteVisits, getSiteVisit, createSiteVisit } from '@/services/siteVisitService'
+import {
+  getSiteVisits,
+  getSiteVisit,
+  createSiteVisit,
+  updateSiteVisit,
+  deleteSiteVisit,
+} from '@/services/siteVisitService'
 import toast from 'react-hot-toast'
 
 export const SITE_VISITS_KEY    = ['site-visits']
@@ -65,4 +71,36 @@ export function useCreateSiteVisit({ onSuccess } = {}) {
       toast.error(msg)
     },
   })
+}
+
+export function useUpdateSiteVisit(id, { onSuccess } = {}) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload) => updateSiteVisit(id, payload),
+    onSuccess: (visit) => {
+      qc.setQueryData(SITE_VISIT_KEY(id), visit)
+      qc.invalidateQueries({ queryKey: SITE_VISITS_KEY })
+      toast.success('Site visit updated.')
+      onSuccess?.(visit)
+    },
+    onError: (err) => toast.error(siteVisitError(err, 'Failed to update site visit.')),
+  })
+}
+
+export function useDeleteSiteVisit(id, { onSuccess } = {}) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => deleteSiteVisit(id),
+    onSuccess: () => {
+      qc.removeQueries({ queryKey: SITE_VISIT_KEY(id) })
+      qc.invalidateQueries({ queryKey: SITE_VISITS_KEY })
+      toast.success('Site visit deleted.')
+      onSuccess?.()
+    },
+    onError: (err) => toast.error(siteVisitError(err, 'Failed to delete site visit.')),
+  })
+}
+
+function siteVisitError(err, fallback) {
+  return err.response?.data?.detail || err.response?.data?.message || Object.values(err.response?.data || {})[0]?.[0] || fallback
 }

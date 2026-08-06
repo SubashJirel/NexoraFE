@@ -29,10 +29,10 @@ export default function AppLayout() {
       <main
         className={cn(
           'min-h-screen pt-[60px] transition-[padding-left] duration-300',
-          sidebarCollapsed ? 'pl-16' : 'pl-60'
+          sidebarCollapsed ? 'pl-0 lg:pl-16' : 'pl-0 lg:pl-60'
         )}
       >
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <Outlet />
         </div>
       </main>

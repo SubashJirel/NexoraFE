@@ -1,78 +1,48 @@
-import { Search, Bell, Menu } from 'lucide-react'
+import { Bell, Menu } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/cn'
 import Avatar from '@/components/ui/Avatar'
+import { useResource } from '@/hooks/useOperations'
 
 export default function Topbar({ title }) {
   const { sidebarCollapsed, toggleSidebar } = useUIStore()
   const { user } = useAuthStore()
+  const notifications = useResource('notifications', {}, { refetchInterval: 30_000 })
+  const unread = (notifications.data || []).filter((item) => !item.is_read).length
 
   return (
     <header
       className={cn(
-        'fixed right-0 top-0 z-[100] flex h-[60px] items-center gap-4',
-        'border-b border-[#DDE5E3] bg-white/90 backdrop-blur-sm px-5',
-        'transition-[left] duration-300',
-        sidebarCollapsed ? 'left-16' : 'left-60'
+        'fixed left-0 right-0 top-0 z-[100] flex h-[60px] items-center gap-4 border-b border-[#DDE5E3] bg-white/90 px-4 backdrop-blur-sm transition-[left] duration-300 sm:px-5',
+        sidebarCollapsed ? 'lg:left-16' : 'lg:left-60'
       )}
     >
-      {/* Mobile hamburger */}
       <button
+        type="button"
         onClick={toggleSidebar}
-        className="flex items-center justify-center h-8 w-8 rounded-lg text-[#637079] hover:bg-[#EEF2F2] transition-colors lg:hidden"
-        aria-label="Toggle navigation"
+        className="flex h-8 w-8 items-center justify-center rounded-lg text-[#637079] transition-colors hover:bg-[#EEF2F2] lg:hidden"
+        aria-label="Open navigation"
       >
         <Menu size={18} />
       </button>
 
-      {/* Page title */}
-      {title && (
-        <h1 className="text-base font-semibold text-[#263238] hidden sm:block">{title}</h1>
-      )}
+      {title && <h1 className="truncate text-base font-semibold text-[#263238]">{title}</h1>}
 
-      {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Search */}
-      <div className="relative hidden md:flex items-center">
-        <Search size={15} className="absolute left-3 text-[#8b969d] pointer-events-none" />
-        <input
-          type="search"
-          placeholder="Search..."
-          className={cn(
-            'h-9 w-56 lg:w-72 rounded-lg border border-[#DDE5E3]',
-            'bg-[#F8FAFA] pl-9 pr-3 text-sm text-[#263238]',
-            'placeholder:text-[#8b969d]',
-            'focus:outline-none focus:ring-2 focus:ring-[#496B5A]/30 focus:border-[#496B5A]',
-            'transition-all duration-150'
-          )}
-        />
-      </div>
-
-      {/* Notifications */}
-      <button
-        className="relative flex h-9 w-9 items-center justify-center rounded-lg text-[#637079] hover:bg-[#EEF2F2] transition-colors"
-        aria-label="Notifications"
-      >
+      <Link to="/notifications" className="relative flex h-9 w-9 items-center justify-center rounded-lg text-[#637079] hover:bg-[#EEF2F2]" aria-label={`${unread} unread notifications`}>
         <Bell size={18} />
-        {/* Unread dot */}
-        <span
-          className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#ef4444] ring-2 ring-white"
-          aria-hidden="true"
-        />
-      </button>
+        {unread > 0 && <span className="absolute right-0.5 top-0.5 min-w-4 rounded-full bg-red-500 px-1 text-center text-[9px] font-bold leading-4 text-white">{Math.min(unread, 99)}</span>}
+      </Link>
 
-      {/* User avatar */}
-      <button
-        className="flex items-center gap-2.5 rounded-lg p-1 hover:bg-[#EEF2F2] transition-colors"
-        aria-label="Open user menu"
-      >
+      <div className="flex min-w-0 items-center gap-2.5" aria-label="Current user">
         <Avatar alt={user?.name || 'User'} src={user?.avatarUrl} size="sm" status="online" />
-        <span className="hidden sm:block text-sm font-medium text-[#263238] max-w-[120px] truncate">
+        <span className="hidden max-w-[120px] truncate text-sm font-medium text-[#263238] sm:block">
           {user?.name || 'User'}
         </span>
-      </button>
+      </div>
     </header>
   )
 }

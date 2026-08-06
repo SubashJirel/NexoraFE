@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -14,6 +14,7 @@ import Step4Media from './add/steps/Step4Media'
 import Step5Description from './add/steps/Step5Description'
 import Step6Publish from './add/steps/Step6Publish'
 import { INITIAL_FORM, validateStep, buildPropertyPayload, propertyToForm } from './propertyFormUtils'
+import { useResource } from '@/hooks/useOperations'
 
 const STEPS = [
   { id: 1, label: 'Basic Info' },
@@ -28,24 +29,19 @@ export default function EditPropertyPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { data: property, isLoading, isError } = useProperty(id)
+  const customFields = useResource('custom-fields', { module: 'property' })
 
   const [step, setStep] = useState(1)
-  const [form, setForm] = useState(INITIAL_FORM)
+  const [formState, setForm] = useState(null)
   const [errors, setErrors] = useState({})
-  const [formReady, setFormReady] = useState(false)
+  const form = property ? (formState ?? propertyToForm(property)) : INITIAL_FORM
 
   const { mutate: updateProperty, isPending } = useUpdateProperty(id, {
     onSuccess: () => navigate(`/properties/${id}`),
   })
 
-  useEffect(() => {
-    if (!property) return
-    setForm(propertyToForm(property))
-    setFormReady(true)
-  }, [property])
-
   function onChange(field, value) {
-    setForm((current) => ({ ...current, [field]: value }))
+    setForm((current) => ({ ...(current ?? propertyToForm(property)), [field]: value }))
     if (errors[field]) setErrors((current) => ({ ...current, [field]: '' }))
   }
 
@@ -77,9 +73,9 @@ export default function EditPropertyPage() {
     updateProperty({ propertyPayload: buildPropertyPayload(form) })
   }
 
-  const stepProps = { form, errors, onChange }
+  const stepProps = { form, errors, onChange, customFields: customFields.data || [] }
 
-  if (isLoading || !formReady) return <PageSpinner />
+  if (isLoading) return <PageSpinner />
 
   if (isError || !property) {
     return (

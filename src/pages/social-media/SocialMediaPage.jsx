@@ -69,7 +69,7 @@ function DisconnectModal({ account, onConfirm, onCancel, isLoading }) {
 }
 
 // ── Platform card ─────────────────────────────────────────────
-function PlatformCard({ platform, icon: Icon, brandColor, brandBg, description, connection, onConnect, onDisconnect, isConnecting, comingSoon }) {
+function PlatformCard({ platform, icon: Icon, brandColor, description, connection, onConnect, onDisconnect, isConnecting, comingSoon }) {
   const isConnected = connection?.status === 'connected'
   const hasWarning = isConnected && connection?.webhook_subscription_status === 'failed'
 
@@ -648,7 +648,6 @@ export default function SocialMediaPage() {
                   platform="facebook"
                   icon={FacebookIcon}
                   brandColor="#1877F2"
-                  brandBg="#1877F2"
                   description="Post property listings to your Facebook Page, respond to inquiries, and automatically capture conversations as leads."
                   connection={getConnection('facebook')}
                   onConnect={() => startMeta()}
@@ -659,7 +658,6 @@ export default function SocialMediaPage() {
                   platform="instagram"
                   icon={InstagramIcon}
                   brandColor="#E1306C"
-                  brandBg="#E1306C"
                   description="Share property photos and stories. Connecting your Facebook Page will also link any attached Instagram Business account."
                   connection={getConnection('instagram')}
                   onConnect={() => startMeta()}

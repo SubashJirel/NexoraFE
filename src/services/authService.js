@@ -19,3 +19,23 @@ export async function register(payload) {
   const { data } = await apiClient.post('/auth/register/', payload)
   return data
 }
+
+export async function verifyLoginOTP(payload) {
+  const { data } = await apiClient.post('/auth/verify-login-otp/', payload)
+  return data
+}
+
+export async function resendLoginOTP(payload) {
+  const { data } = await apiClient.post('/auth/resend-login-otp/', payload)
+  return data
+}
+
+export async function requestPasswordReset(email) {
+  const { data } = await apiClient.post('/auth/password-reset/', { email })
+  return data
+}
+
+export async function confirmPasswordReset(payload) {
+  const { data } = await apiClient.post('/auth/password-reset/confirm/', payload)
+  return data
+}

@@ -10,7 +10,7 @@ import LeadsKanban    from './components/LeadsKanban'
 import LeadsTable     from './components/LeadsTable'
 import LeadFormModal  from './components/LeadFormModal'
 import LeadDrawer     from './components/LeadDrawer'
-import { LEAD_STATUSES, LEAD_SOURCES, STATUS_MAP } from './leadsConstants'
+import { LEAD_STATUSES, LEAD_SOURCES } from './leadsConstants'
 
 export default function LeadsPage() {
   const { data: leads = [], isLoading, isError } = useLeads()
@@ -50,8 +50,8 @@ export default function LeadsPage() {
   const stats = useMemo(() => {
     const total    = leads.length
     const newCount = leads.filter((l) => l.status === 'new').length
-    const hot      = leads.filter((l) => ['interested','negotiation'].includes(l.status)).length
-    const closed   = leads.filter((l) => l.status === 'closed').length
+    const hot      = leads.filter((l) => ['interested', 'negotiating'].includes(l.status)).length
+    const closed   = leads.filter((l) => l.status === 'won').length
     return { total, newCount, hot, closed }
   }, [leads])
 

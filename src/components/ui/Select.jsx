@@ -1,4 +1,4 @@
-import { forwardRef } from 'react'
+import { forwardRef, useId } from 'react'
 import { cn } from '@/lib/cn'
 
 /**
@@ -8,7 +8,8 @@ const Select = forwardRef(function Select(
   { label, hint, error, size = 'md', className, id, disabled, children, ...props },
   ref
 ) {
-  const inputId = id || `select-${Math.random().toString(36).slice(2, 9)}`
+  const generatedId = useId()
+  const inputId = id || `select-${generatedId}`
   const hasError = Boolean(error)
 
   const sizeMap = { sm: 'h-8 text-xs px-3', md: 'h-10 text-sm px-3', lg: 'h-11 text-sm px-4' }

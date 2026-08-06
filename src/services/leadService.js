@@ -40,8 +40,8 @@ export async function createInteraction(leadId, payload) {
 }
 
 /** DELETE /api/leads/{leadId}/interactions/{id}/ */
-export async function deleteInteraction(leadId, interactionId) {
-  await apiClient.delete(`/leads/${leadId}/interactions/${interactionId}/`)
+export async function deleteInteraction(interactionId) {
+  await apiClient.delete(`/leads/interactions/${interactionId}/`)
 }
 
 // ── Interests ─────────────────────────────────────────────────
@@ -59,6 +59,16 @@ export async function createInterest(leadId, payload) {
 }
 
 /** DELETE /api/leads/{leadId}/interests/{id}/ */
-export async function deleteInterest(leadId, interestId) {
-  await apiClient.delete(`/leads/${leadId}/interests/${interestId}/`)
+export async function deleteInterest(interestId) {
+  await apiClient.delete(`/leads/interests/${interestId}/`)
+}
+
+export async function getLeadTimeline(leadId) {
+  const { data } = await apiClient.get(`/leads/${leadId}/timeline/`)
+  return data
+}
+
+export async function completeLeadFollowUp(leadId, payload) {
+  const { data } = await apiClient.post(`/leads/${leadId}/complete-follow-up/`, payload)
+  return data
 }
