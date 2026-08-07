@@ -12,6 +12,7 @@ import { PageSpinner } from '@/components/ui/Spinner'
 import { formatNpr } from '@/lib/nepalProperty'
 import PropertyVerificationPanel from './components/PropertyVerificationPanel'
 import PropertyFreshnessPanel from './components/PropertyFreshnessPanel'
+import PropertyDistributionPanel from './components/PropertyDistributionPanel'
 
 const STATUS_CONFIG = {
   draft: { label: 'Draft', variant: 'neutral' },
@@ -168,6 +169,7 @@ export default function PropertyDetailsPage() {
 
           <PropertyVerificationPanel propertyId={id} />
           <PropertyFreshnessPanel property={property} />
+          <PropertyDistributionPanel propertyId={id} />
 
           <section className="rounded-2xl border border-[#DDE5E3] bg-white p-5 sm:p-6 space-y-5">
             <SectionTitle icon={<SquareAsterisk size={16} />} title="Property Details" />

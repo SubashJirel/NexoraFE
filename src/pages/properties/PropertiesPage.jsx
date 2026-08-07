@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
-import { Plus, LayoutGrid, List, Search } from 'lucide-react'
+import { Plus, LayoutGrid, List, Search, FileSpreadsheet } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import { useProperties } from '@/hooks/useProperties'
 import PropertyCard from './components/PropertyCard'
@@ -7,6 +8,7 @@ import PropertyFilters from './components/PropertyFilters'
 import Button from '@/components/ui/Button'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { cn } from '@/lib/cn'
+import { downloadPortalExport } from '@/services/propertyDistributionService'
 
 const EMPTY_FILTERS = {
   property_type:  '',
@@ -21,6 +23,7 @@ export default function PropertiesPage() {
   const [view, setView]     = useState('grid')
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState(EMPTY_FILTERS)
+  const [isExporting, setIsExporting] = useState(false)
 
   // Build the params object that goes to the API.
   // search maps to the backend's `search` param.
@@ -41,6 +44,18 @@ export default function PropertiesPage() {
     sold:              allProperties.filter((p) => p.status === 'sold').length,
   }), [allProperties])
 
+  async function exportPortalCsv() {
+    setIsExporting(true)
+    try {
+      await downloadPortalExport(allProperties.map((property) => property.id))
+      toast.success('Portal CSV exported.')
+    } catch {
+      toast.error('Could not export property CSV.')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
 
@@ -54,6 +69,7 @@ export default function PropertiesPage() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outlined" size="md" leftIcon={<FileSpreadsheet size={15} />} loading={isExporting} disabled={!allProperties.length} onClick={exportPortalCsv}>Portal CSV</Button>
           {/* View toggle */}
           <div className="flex items-center rounded-lg border border-[#DDE5E3] bg-white overflow-hidden">
             <ViewToggle active={view === 'grid'} onClick={() => setView('grid')} aria-label="Grid view">
