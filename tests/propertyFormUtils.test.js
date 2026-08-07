@@ -42,6 +42,14 @@ test('draft properties are never marked as published', () => {
   assert.equal(payload.published_at, null)
 })
 
+test('reserved and under-negotiation properties remain public', () => {
+  for (const status of ['reserved', 'under_negotiation']) {
+    const payload = buildPropertyPayload({ ...INITIAL_FORM, status })
+    assert.equal(payload.is_published, true)
+    assert.match(payload.published_at, /^\d{4}-\d{2}-\d{2}T/)
+  }
+})
+
 test('property validation identifies required fields by step', () => {
   assert.deepEqual(Object.keys(validateStep(1, INITIAL_FORM)).sort(), [
     'price',
@@ -52,6 +60,7 @@ test('property validation identifies required fields by step', () => {
     'address',
     'city',
     'district',
+    'municipality',
   ])
 })
 

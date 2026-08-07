@@ -11,13 +11,16 @@ import Badge from '@/components/ui/Badge'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { formatNpr } from '@/lib/nepalProperty'
 import PropertyVerificationPanel from './components/PropertyVerificationPanel'
+import PropertyFreshnessPanel from './components/PropertyFreshnessPanel'
 
 const STATUS_CONFIG = {
   draft: { label: 'Draft', variant: 'neutral' },
   available: { label: 'Available', variant: 'success' },
+  reserved: { label: 'Reserved', variant: 'warning' },
   under_negotiation: { label: 'Under Negotiation', variant: 'warning' },
   sold: { label: 'Sold', variant: 'error' },
   rented: { label: 'Rented', variant: 'info' },
+  withdrawn: { label: 'Withdrawn', variant: 'error' },
   hidden: { label: 'Hidden', variant: 'neutral' },
   archived: { label: 'Archived', variant: 'neutral' },
 }
@@ -164,6 +167,7 @@ export default function PropertyDetailsPage() {
           </section>
 
           <PropertyVerificationPanel propertyId={id} />
+          <PropertyFreshnessPanel property={property} />
 
           <section className="rounded-2xl border border-[#DDE5E3] bg-white p-5 sm:p-6 space-y-5">
             <SectionTitle icon={<SquareAsterisk size={16} />} title="Property Details" />

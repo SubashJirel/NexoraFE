@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Bath, Bed, CalendarDays, Check, Heart, MapPin, Maximize2, Phone, UserRound } from 'lucide-react'
+import { Bath, Bed, CalendarDays, Check, Flag, Heart, MapPin, Maximize2, Phone, UserRound } from 'lucide-react'
 import { Link, useOutletContext, useParams } from 'react-router-dom'
 import {
   usePublicInquiry,
@@ -8,7 +8,7 @@ import {
   usePublicSiteVisitRequest,
   useSimilarProperties,
 } from '@/hooks/usePublicAgency'
-import { getCustomerSession, getSavedProperties, toggleSavedProperty, trackPublicPropertyEvent } from '@/services/publicService'
+import { getCustomerSession, getSavedProperties, reportPublicListing, toggleSavedProperty, trackPublicPropertyEvent } from '@/services/publicService'
 import { PublicPropertyCard, formatPrice } from './PublicAgencyPage'
 import Avatar from '@/components/ui/Avatar'
 import Input from '@/components/ui/Input'
@@ -65,6 +65,8 @@ export default function PublicPropertyPage() {
           <div><div className="flex items-start justify-between gap-4"><div><p className="text-sm font-semibold uppercase tracking-wider text-[var(--agency-color)]">{property.display_property_id} · For {property.purpose}</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">{property.title}</h1></div>{getCustomerSession(agency.slug) ? <button aria-label="Save property" onClick={async () => { await toggleSavedProperty(agency.slug, property.id); setSaved((value) => !value) }} className={`rounded-full border p-3 ${saved ? 'border-red-200 bg-red-50 text-red-500' : 'border-[#DDE5E3] text-[#637079]'}`}><Heart size={20} fill={saved ? 'currentColor' : 'none'} /></button> : <Link to={`/agency/${agency.slug}/portal`} className="rounded-lg border border-[#DDE5E3] px-3 py-2 text-xs font-semibold">Sign in to save</Link>}</div><p className="mt-3 flex items-center gap-2 text-[#637079]"><MapPin size={16} />{property.location_display}</p><p className="mt-5 text-3xl font-black text-[var(--agency-color)]">{formatPrice(property.price, property.currency)}</p></div>
           <div className="grid grid-cols-2 gap-3 rounded-2xl border border-[#DDE5E3] bg-white p-5 sm:grid-cols-4"><Spec icon={Bed} label="Bedrooms" value={property.bedrooms ?? '—'} /><Spec icon={Bath} label="Bathrooms" value={property.bathrooms ?? '—'} /><Spec icon={Maximize2} label="Built-up area" value={property.built_up_area_value ? `${property.built_up_area_value} ${property.built_up_area_unit}` : '—'} /><Spec icon={Phone} label="Road access" value={property.road_access_value ? `${property.road_access_value} ${property.road_access_unit}` : '—'} /></div>
           {property.verification_summary?.level !== 'unverified' && <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800"><Check size={14} />{property.verification_summary.label} · {property.verification_summary.approved_documents}/{property.verification_summary.total_documents} documents resolved</div>}
+          {property.availability_verified_at && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3"><p className="text-sm font-semibold text-emerald-900"><CalendarDays size={15} className="mr-2 inline" />Recently confirmed by {agency.name} on {new Date(property.availability_verified_at).toLocaleDateString()}</p><ReportListing agency={agency} property={property} /></div>}
+          {!property.availability_verified_at && <div className="flex justify-end"><ReportListing agency={agency} property={property} /></div>}
           <Section title="Nepal property details">
             <div className="grid gap-3 rounded-2xl border border-[#DDE5E3] bg-white p-5 sm:grid-cols-2 lg:grid-cols-3">
               <Fact label="Land classification" value={words(property.land_use_classification)} />
@@ -116,3 +118,13 @@ function Spec({ icon: Icon, label, value }) { return <div><Icon size={17} classN
 function Section({ title, children }) { return <section><h2 className="mb-4 text-xl font-bold">{title}</h2>{children}</section> }
 function Fact({ label, value }) { return <div><p className="text-xs text-[#8b969d]">{label}</p><p className="mt-1 text-sm font-semibold">{value || '—'}</p></div> }
 function words(value) { return value ? String(value).split('_').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') : '' }
+
+function ReportListing({ agency, property }) {
+  const [open, setOpen] = useState(false)
+  const [form, setForm] = useState({ reason: '', message: '', full_name: '', email: '' })
+  const [status, setStatus] = useState('idle')
+  async function submit(event) { event.preventDefault(); setStatus('submitting'); try { await reportPublicListing(agency.slug, property.id, { full_name: form.full_name, email: form.email, message: form.message, metadata: { reason: form.reason }, source_page: window.location.pathname }); setStatus('success') } catch { setStatus('error') } }
+  if (!open) return <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-1 text-xs font-semibold text-[#637079]"><Flag size={13} />Report listing</button>
+  if (status === 'success') return <p className="text-xs font-semibold text-emerald-800">Thank you. The agency will review your report.</p>
+  return <form onSubmit={submit} className="w-full space-y-2 sm:max-w-md"><select required value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })} className="h-9 w-full rounded-lg border border-emerald-200 bg-white px-3 text-xs"><option value="">Why are you reporting this listing?</option><option value="unavailable">No longer available</option><option value="already_sold">Already sold or rented</option><option value="duplicate">Duplicate listing</option><option value="incorrect_information">Incorrect information</option><option value="suspicious">Suspicious listing</option><option value="other">Other</option></select><textarea required rows="2" value={form.message} onChange={(event) => setForm({ ...form, message: event.target.value })} placeholder="Tell the agency what appears wrong" className="w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs" /><div className="grid grid-cols-2 gap-2"><input value={form.full_name} onChange={(event) => setForm({ ...form, full_name: event.target.value })} placeholder="Name (optional)" className="h-9 rounded-lg border border-emerald-200 px-3 text-xs" /><input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} placeholder="Email (optional)" className="h-9 rounded-lg border border-emerald-200 px-3 text-xs" /></div>{status === 'error' && <p className="text-xs text-red-700">Unable to send report.</p>}<div className="flex gap-2"><button type="submit" disabled={status === 'submitting'} className="rounded-lg bg-emerald-800 px-3 py-2 text-xs font-semibold text-white">{status === 'submitting' ? 'Sending…' : 'Send report'}</button><button type="button" onClick={() => setOpen(false)} className="text-xs text-[#637079]">Cancel</button></div></form>
+}

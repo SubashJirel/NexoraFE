@@ -150,6 +150,36 @@ export async function updatePropertyVerificationDocument(propertyId, documentTyp
   return data
 }
 
+export async function confirmPropertyFreshness(propertyId, payload) {
+  const { data } = await apiClient.post(`/properties/${propertyId}/freshness/confirm/`, payload)
+  return data
+}
+
+export async function requestPropertyRepublish(propertyId) {
+  const { data } = await apiClient.post(`/properties/${propertyId}/republish/request/`)
+  return data
+}
+
+export async function decidePropertyRepublish(propertyId, payload) {
+  const { data } = await apiClient.post(`/properties/${propertyId}/republish/decision/`, payload)
+  return data
+}
+
+export async function getPropertyHistory(propertyId) {
+  const { data } = await apiClient.get(`/properties/${propertyId}/history/`)
+  return data
+}
+
+export async function getPropertyDuplicates(propertyId) {
+  const { data } = await apiClient.get(`/properties/${propertyId}/duplicates/`)
+  return data
+}
+
+export async function updatePropertyDuplicate(flagId, status) {
+  const { data } = await apiClient.patch(`/properties/duplicates/${flagId}/`, { status })
+  return data
+}
+
 /**
  * Orchestrates both APIs as a single atomic action:
  *  1. POST /api/properties/          → get propertyId

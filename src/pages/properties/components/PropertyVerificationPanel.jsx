@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Check, ChevronDown, ChevronUp, FileCheck2, ShieldCheck, Upload } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
@@ -62,18 +62,17 @@ export default function PropertyVerificationPanel({ propertyId }) {
 
       <div className="space-y-2">
         {data.documents.map((document) => (
-          <DocumentRow key={document.document_type} document={document} open={openDocument === document.document_type} onToggle={() => setOpenDocument((value) => value === document.document_type ? null : document.document_type)} onSave={(payload) => { setError(''); updateDocument.mutate({ documentType: document.document_type, payload }, { onError: (requestError) => setError(readApiError(requestError)) }) }} saving={updateDocument.isPending} />
+          <DocumentRow key={`${document.document_type}:${document.updated_at}`} document={document} open={openDocument === document.document_type} onToggle={() => setOpenDocument((value) => value === document.document_type ? null : document.document_type)} onSave={(payload) => { setError(''); updateDocument.mutate({ documentType: document.document_type, payload }, { onError: (requestError) => setError(readApiError(requestError)) }) }} saving={updateDocument.isPending} />
         ))}
       </div>
 
-      <NotesEditor data={data} saving={updateVerification.isPending} onSave={(payload) => updateVerification.mutate(payload, { onError: (requestError) => setError(readApiError(requestError)) })} />
+      <NotesEditor key={data.updated_at} data={data} saving={updateVerification.isPending} onSave={(payload) => updateVerification.mutate(payload, { onError: (requestError) => setError(readApiError(requestError)) })} />
     </PanelShell>
   )
 }
 
 function DocumentRow({ document, open, onToggle, onSave, saving }) {
   const [form, setForm] = useState(document)
-  useEffect(() => setForm(document), [document])
   const statusTone = document.status === 'approved' || document.status === 'not_applicable' ? 'success' : document.status === 'rejected' ? 'error' : document.status === 'missing' ? 'neutral' : 'warning'
   return <div className="overflow-hidden rounded-xl border border-[#DDE5E3] bg-white">
     <div className="flex items-center gap-3 p-3">
@@ -102,7 +101,6 @@ function DocumentRow({ document, open, onToggle, onSave, saving }) {
 function NotesEditor({ data, onSave, saving }) {
   const [inspectionNotes, setInspectionNotes] = useState(data.inspection_notes || '')
   const [reviewNotes, setReviewNotes] = useState(data.review_notes || '')
-  useEffect(() => { setInspectionNotes(data.inspection_notes || ''); setReviewNotes(data.review_notes || '') }, [data])
   return <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]"><Input label="Physical inspection notes" value={inspectionNotes} onChange={(event) => setInspectionNotes(event.target.value)} /><Input label="Due-diligence review notes" value={reviewNotes} onChange={(event) => setReviewNotes(event.target.value)} /><Button className="self-end" size="sm" loading={saving} onClick={() => onSave({ inspection_notes: inspectionNotes, review_notes: reviewNotes })}>Save notes</Button></div>
 }
 

@@ -34,6 +34,7 @@ export const INITIAL_FORM = {
   seo_description: '',
   custom_data: {},
   status: 'draft',
+  withdrawal_reason: '',
   is_published: false,
   is_featured: false,
   assigned_agent: null,
@@ -107,9 +108,10 @@ export function buildPropertyPayload(form) {
     seo_description: form.seo_description?.trim() || '',
     custom_data: form.custom_data || {},
     status,
-    is_published: status === 'available',
+    withdrawal_reason: form.withdrawal_reason?.trim() || '',
+    is_published: ['available', 'reserved', 'under_negotiation'].includes(status),
     is_featured: form.is_featured,
-    published_at: status === 'available' ? new Date().toISOString() : null,
+    published_at: ['available', 'reserved', 'under_negotiation'].includes(status) ? new Date().toISOString() : null,
     assigned_agent: form.assigned_agent ?? null,
   }
 }
@@ -158,6 +160,7 @@ export function propertyToForm(property) {
     seo_description: property.seo_description ?? '',
     custom_data: property.custom_data ?? {},
     status: property.status ?? 'draft',
+    withdrawal_reason: property.withdrawal_reason ?? '',
     is_published: Boolean(property.is_published),
     is_featured: Boolean(property.is_featured),
     assigned_agent: property.assigned_agent ?? null,
