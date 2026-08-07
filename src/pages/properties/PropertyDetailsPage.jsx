@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { formatNpr } from '@/lib/nepalProperty'
+import PropertyVerificationPanel from './components/PropertyVerificationPanel'
 
 const STATUS_CONFIG = {
   draft: { label: 'Draft', variant: 'neutral' },
@@ -161,6 +162,8 @@ export default function PropertyDetailsPage() {
               <DetailItem label="Floors" value={property.floors ?? '—'} icon={<Layers size={14} />} />
             </div>
           </section>
+
+          <PropertyVerificationPanel propertyId={id} />
 
           <section className="rounded-2xl border border-[#DDE5E3] bg-white p-5 sm:p-6 space-y-5">
             <SectionTitle icon={<SquareAsterisk size={16} />} title="Property Details" />
