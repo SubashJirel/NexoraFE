@@ -5,6 +5,7 @@ import {
   Inbox,
   Link2,
   MessageCircle,
+  Workflow,
   Search,
   Send,
   UserPlus,
@@ -31,6 +32,7 @@ import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import { cn } from '@/lib/cn'
 import UnifiedLeadInbox from './UnifiedLeadInbox'
+import LeadAutomationPanel from './LeadAutomationPanel'
 
 const STATUSES = ['open', 'pending', 'closed', 'spam']
 
@@ -39,9 +41,9 @@ export default function InboxPage() {
   return <div className="space-y-5">
     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
       <div><h2 className="text-2xl font-bold text-[#263238]">Unified Lead Inbox</h2><p className="mt-1 text-sm text-[#637079]">Every inquiry, property interest, conversation and follow-up in one place.</p></div>
-      <div className="flex rounded-xl border border-[#DDE5E3] bg-white p-1"><button type="button" onClick={() => setMode('leads')} className={cn('flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold', mode === 'leads' ? 'bg-[#496B5A] text-white' : 'text-[#637079]')}><Users size={14} />All inquiries</button><button type="button" onClick={() => setMode('messages')} className={cn('flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold', mode === 'messages' ? 'bg-[#496B5A] text-white' : 'text-[#637079]')}><MessageCircle size={14} />Live messages</button></div>
+      <div className="flex flex-wrap rounded-xl border border-[#DDE5E3] bg-white p-1"><button type="button" onClick={() => setMode('leads')} className={cn('flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold', mode === 'leads' ? 'bg-[#496B5A] text-white' : 'text-[#637079]')}><Users size={14} />All inquiries</button><button type="button" onClick={() => setMode('messages')} className={cn('flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold', mode === 'messages' ? 'bg-[#496B5A] text-white' : 'text-[#637079]')}><MessageCircle size={14} />Live messages</button><button type="button" onClick={() => setMode('automation')} className={cn('flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold', mode === 'automation' ? 'bg-[#496B5A] text-white' : 'text-[#637079]')}><Workflow size={14} />Automation</button></div>
     </div>
-    {mode === 'leads' ? <UnifiedLeadInbox /> : <SocialInbox />}
+    {mode === 'leads' ? <UnifiedLeadInbox /> : mode === 'messages' ? <SocialInbox /> : <LeadAutomationPanel />}
   </div>
 }
 
