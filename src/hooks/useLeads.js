@@ -4,6 +4,7 @@ import {
   getInteractions, createInteraction, deleteInteraction,
   getInterests, createInterest, deleteInterest,
   getLeadTimeline, completeLeadFollowUp,
+  getLeadWorkspace, uploadLeadDocument,
 } from '@/services/leadService'
 import toast from 'react-hot-toast'
 
@@ -12,6 +13,7 @@ export const LEADS_KEY              = ['leads']
 export const INTERACTIONS_KEY = (id) => ['leads', id, 'interactions']
 export const INTERESTS_KEY    = (id) => ['leads', id, 'interests']
 export const TIMELINE_KEY     = (id) => ['leads', id, 'timeline']
+export const WORKSPACE_KEY    = (id) => ['leads', id, 'workspace']
 
 // ── Leads ─────────────────────────────────────────────────────
 
@@ -46,6 +48,7 @@ export function useUpdateLead(leadId, { onSuccess } = {}) {
         old.map((l) => (String(l.id) === String(updated.id) ? updated : l))
       )
       qc.invalidateQueries({ queryKey: LEADS_KEY })
+      qc.invalidateQueries({ queryKey: WORKSPACE_KEY(leadId) })
       toast.success('Lead updated!')
       onSuccess?.(updated)
     },
@@ -86,6 +89,8 @@ export function useCreateInteraction(leadId, { onSuccess } = {}) {
     onSuccess: (item) => {
       qc.setQueryData(INTERACTIONS_KEY(leadId), (old = []) => [item, ...old])
       qc.invalidateQueries({ queryKey: INTERACTIONS_KEY(leadId) })
+      qc.invalidateQueries({ queryKey: WORKSPACE_KEY(leadId) })
+      qc.invalidateQueries({ queryKey: LEADS_KEY })
       toast.success('Interaction logged!')
       onSuccess?.(item)
     },
@@ -124,6 +129,7 @@ export function useCreateInterest(leadId, { onSuccess } = {}) {
     onSuccess: (item) => {
       qc.setQueryData(INTERESTS_KEY(leadId), (old = []) => [item, ...old])
       qc.invalidateQueries({ queryKey: INTERESTS_KEY(leadId) })
+      qc.invalidateQueries({ queryKey: WORKSPACE_KEY(leadId) })
       toast.success('Interest added!')
       onSuccess?.(item)
     },
@@ -163,10 +169,34 @@ export function useCompleteLeadFollowUp(leadId, { onSuccess } = {}) {
       )
       qc.invalidateQueries({ queryKey: TIMELINE_KEY(leadId) })
       qc.invalidateQueries({ queryKey: INTERACTIONS_KEY(leadId) })
+      qc.invalidateQueries({ queryKey: WORKSPACE_KEY(leadId) })
+      qc.invalidateQueries({ queryKey: LEADS_KEY })
       toast.success('Follow-up completed.')
       onSuccess?.(lead)
     },
     onError: (err) => toast.error(_msg(err, 'Failed to complete follow-up.')),
+  })
+}
+
+export function useLeadWorkspace(leadId) {
+  return useQuery({
+    queryKey: WORKSPACE_KEY(leadId),
+    queryFn: () => getLeadWorkspace(leadId),
+    enabled: Boolean(leadId),
+  })
+}
+
+export function useUploadLeadDocument(leadId, { onSuccess } = {}) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload) => uploadLeadDocument(leadId, payload),
+    onSuccess: (document) => {
+      qc.invalidateQueries({ queryKey: WORKSPACE_KEY(leadId) })
+      qc.invalidateQueries({ queryKey: LEADS_KEY })
+      toast.success('Document attached to lead.')
+      onSuccess?.(document)
+    },
+    onError: (err) => toast.error(_msg(err, 'Failed to attach document.')),
   })
 }
 

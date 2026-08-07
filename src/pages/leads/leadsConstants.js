@@ -20,9 +20,12 @@ export const LEAD_SOURCES = [
   { value: 'instagram', label: 'Instagram' },
   { value: 'tiktok', label: 'TikTok' },
   { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'viber', label: 'Viber' },
+  { value: 'phone', label: 'Phone inquiry' },
   { value: 'manual', label: 'Manual' },
   { value: 'referral', label: 'Referral' },
   { value: 'walk_in', label: 'Walk-in' },
+  { value: 'property_portal', label: 'Property portal' },
 ]
 
 export const PROPERTY_TYPES = [
@@ -47,6 +50,11 @@ export const INTERACTION_TYPES = [
   { value: 'sms', label: 'SMS', icon: 'SMS' },
   { value: 'site_visit', label: 'Site Visit', icon: 'Visit' },
   { value: 'whatsapp', label: 'WhatsApp', icon: 'WA' },
+  { value: 'viber', label: 'Viber', icon: 'VB' },
+  { value: 'facebook', label: 'Facebook', icon: 'FB' },
+  { value: 'instagram', label: 'Instagram', icon: 'IG' },
+  { value: 'walk_in', label: 'Walk-in', icon: 'Walk' },
+  { value: 'property_portal', label: 'Property portal', icon: 'Portal' },
   { value: 'other', label: 'Other', icon: 'Note' },
 ]
 
@@ -62,9 +70,12 @@ export const SOURCE_BADGE = {
   instagram: { variant: 'warning', short: 'IG' },
   tiktok: { variant: 'neutral', short: 'TT' },
   whatsapp: { variant: 'success', short: 'WA' },
+  viber: { variant: 'default', short: 'VB' },
+  phone: { variant: 'info', short: 'CALL' },
   manual: { variant: 'neutral', short: 'MAN' },
   referral: { variant: 'success', short: 'REF' },
   walk_in: { variant: 'default', short: 'WALK' },
+  property_portal: { variant: 'warning', short: 'PORTAL' },
 }
 
 export const KANBAN_COLUMNS = [

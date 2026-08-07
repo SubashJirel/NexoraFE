@@ -72,3 +72,19 @@ export async function completeLeadFollowUp(leadId, payload) {
   const { data } = await apiClient.post(`/leads/${leadId}/complete-follow-up/`, payload)
   return data
 }
+
+export async function getLeadWorkspace(leadId) {
+  const { data } = await apiClient.get(`/leads/${leadId}/workspace/`)
+  return data
+}
+
+export async function uploadLeadDocument(leadId, payload) {
+  const form = new FormData()
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value !== '' && value != null) form.append(key, value)
+  })
+  const { data } = await apiClient.post(`/leads/${leadId}/documents/`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
+}
