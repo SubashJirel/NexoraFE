@@ -82,6 +82,13 @@ export async function trackPublicPropertyEvent(licenseNumber, id, eventType) {
   return data
 }
 
+export async function reportPublicListing(agencySlug, propertyId, payload) {
+  const { data } = await apiClient.post(`/public/agencies/${agencySlug}/submissions/`, {
+    kind: 'listing_report', property: propertyId, ...payload,
+  })
+  return data
+}
+
 export async function registerCustomer(slug, payload) {
   const { data } = await apiClient.post(`/public/agencies/${slug}/customers/`, payload)
   saveCustomerSession(slug, data)

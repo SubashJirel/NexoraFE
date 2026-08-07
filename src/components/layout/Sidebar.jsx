@@ -24,11 +24,14 @@ import {
   Share2,
   UserCircle,
   UserCheck,
+  Globe2,
+  Star,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import Avatar from '@/components/ui/Avatar'
+import { useLocalization } from '@/context/useLocalization'
 
 const NAV_ITEMS = [
   {
@@ -68,7 +71,12 @@ const NAV_ITEMS = [
   },
   {
     group: 'Marketing',
-    items: [{ label: 'Social Media', to: '/social-media', icon: Share2 }],
+    items: [
+      { label: 'Social Media', to: '/social-media', icon: Share2 },
+      { label: 'Website Content', to: '/website-content', icon: Globe2, roles: ['agency_owner', 'agency_manager', 'super_admin'] },
+      { label: 'Web Submissions', to: '/website-submissions', icon: MessageCircle },
+      { label: 'Agent Reviews', to: '/agent-reviews', icon: Star, roles: ['agency_owner', 'agency_manager', 'super_admin'] },
+    ],
   },
   {
     group: 'Reports',
@@ -98,6 +106,7 @@ export default function Sidebar() {
     toggleSidebarCollapse,
   } = useUIStore()
   const { user, clearAuth } = useAuthStore()
+  const { t } = useLocalization()
 
   const closeMobileSidebar = () => setSidebarOpen(false)
   const sections = NAV_ITEMS.map((section) => ({
@@ -148,12 +157,13 @@ export default function Sidebar() {
                 'mb-1 px-5 text-[10px] font-semibold uppercase tracking-widest text-white/40',
                 sidebarCollapsed && 'lg:hidden'
               )}>
-                {section.group}
+                {t(section.group)}
               </p>
               {section.items.map((item) => (
                 <NavItem
                   key={item.to}
                   item={item}
+                  label={t(item.label)}
                   collapsed={sidebarCollapsed}
                   onNavigate={closeMobileSidebar}
                 />
@@ -175,7 +185,7 @@ export default function Sidebar() {
             )}
           >
             <LogOut size={18} className="shrink-0" />
-            <span className={cn(sidebarCollapsed && 'lg:hidden')}>Logout</span>
+            <span className={cn(sidebarCollapsed && 'lg:hidden')}>{t('Logout')}</span>
           </button>
 
           <div className={cn(
@@ -203,7 +213,7 @@ export default function Sidebar() {
   )
 }
 
-function NavItem({ item, collapsed, onNavigate }) {
+function NavItem({ item, label, collapsed, onNavigate }) {
   const Icon = item.icon
 
   return (
@@ -217,10 +227,10 @@ function NavItem({ item, collapsed, onNavigate }) {
           ? 'bg-[#496B5A] font-semibold text-white'
           : 'text-white/60 hover:bg-white/10 hover:text-white'
       )}
-      title={collapsed ? item.label : undefined}
+      title={collapsed ? label : undefined}
     >
       <Icon size={18} className="shrink-0" />
-      <span className={cn(collapsed && 'lg:hidden')}>{item.label}</span>
+      <span className={cn(collapsed && 'lg:hidden')}>{label}</span>
     </NavLink>
   )
 }

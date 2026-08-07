@@ -9,13 +9,19 @@ import { useUploadPropertyMedia } from '@/hooks/useUploadPropertyMedia'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import { PageSpinner } from '@/components/ui/Spinner'
+import { formatNpr } from '@/lib/nepalProperty'
+import PropertyVerificationPanel from './components/PropertyVerificationPanel'
+import PropertyFreshnessPanel from './components/PropertyFreshnessPanel'
+import PropertyDistributionPanel from './components/PropertyDistributionPanel'
 
 const STATUS_CONFIG = {
   draft: { label: 'Draft', variant: 'neutral' },
   available: { label: 'Available', variant: 'success' },
+  reserved: { label: 'Reserved', variant: 'warning' },
   under_negotiation: { label: 'Under Negotiation', variant: 'warning' },
   sold: { label: 'Sold', variant: 'error' },
   rented: { label: 'Rented', variant: 'info' },
+  withdrawn: { label: 'Withdrawn', variant: 'error' },
   hidden: { label: 'Hidden', variant: 'neutral' },
   archived: { label: 'Archived', variant: 'neutral' },
 }
@@ -103,7 +109,7 @@ export default function PropertyDetailsPage() {
             <h2 className="text-2xl font-bold text-[#263238]">{property.title}</h2>
             <p className="mt-1 flex items-center gap-1.5 text-sm text-[#637079]">
               <MapPin size={14} className="text-[#8FAF9B]" />
-              {[property.city, property.district, property.province].filter(Boolean).join(', ')}
+              {[property.tole, property.municipality || property.city, property.district, property.province].filter(Boolean).join(', ')}
             </p>
           </div>
         </div>
@@ -161,15 +167,32 @@ export default function PropertyDetailsPage() {
             </div>
           </section>
 
+          <PropertyVerificationPanel propertyId={id} />
+          <PropertyFreshnessPanel property={property} />
+          <PropertyDistributionPanel propertyId={id} />
+
           <section className="rounded-2xl border border-[#DDE5E3] bg-white p-5 sm:p-6 space-y-5">
             <SectionTitle icon={<SquareAsterisk size={16} />} title="Property Details" />
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <DetailItem label="Land Area" value={formatMeasurement(property.land_area_value, property.land_area_unit)} icon={<Maximize2 size={14} />} />
               <DetailItem label="Built-up Area" value={formatMeasurement(property.built_up_area_value, property.built_up_area_unit)} icon={<Maximize2 size={14} />} />
               <DetailItem label="Road Access" value={formatMeasurement(property.road_access_value, property.road_access_unit)} icon={<Maximize2 size={14} />} />
+              <DetailItem label="Classification" value={capWords(property.land_use_classification)} icon={<Tag size={14} />} />
+              <DetailItem label="Road Type" value={capWords(property.road_type)} icon={<Maximize2 size={14} />} />
+              <DetailItem label="Facing" value={capWords(property.facing_direction)} icon={<Home size={14} />} />
+              <DetailItem label="Plot Shape" value={capWords(property.plot_shape)} icon={<SquareAsterisk size={14} />} />
+              <DetailItem label="Mohada × Pichhad" value={property.mohada_value || property.pichhad_value ? `${property.mohada_value || '—'} × ${property.pichhad_value || '—'} ${property.plot_dimension_unit}` : '—'} icon={<Maximize2 size={14} />} />
+              <DetailItem label="Major Route Distance" value={property.major_road_distance_value ? `${property.major_road_distance_value} ${property.major_road_distance_unit} to ${property.nearest_major_road || capWords(property.major_road_type)}` : '—'} icon={<MapPin size={14} />} />
               <DetailItem label="Latitude" value={property.latitude || '—'} icon={<MapPin size={14} />} />
               <DetailItem label="Longitude" value={property.longitude || '—'} icon={<MapPin size={14} />} />
               <DetailItem label="Assigned Agent" value={formatAgent(property.assigned_agent)} icon={<Building2 size={14} />} />
+            </div>
+            {property.land_area_conversions && <div className="rounded-xl bg-[#F8FAFA] p-4 text-xs text-[#637079]"><strong className="text-[#263238]">Area equivalents:</strong> {['ropani','aana','paisa','daam','bigha','kattha','dhur','sqft','sqm'].map((unit) => property.land_area_conversions[unit] ? `${Number(property.land_area_conversions[unit]).toLocaleString()} ${unit}` : null).filter(Boolean).join(' · ')}</div>}
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {[['Per Aana', property.price_per_aana], ['Per Dhur', property.price_per_dhur], ['Per Kattha', property.price_per_kattha], ['Per sq ft', property.price_per_land_sqft]].map(([label, value]) => <MetaItem key={label} label={label} value={value ? formatNpr(value) : '—'} />)}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {[['Water', property.has_water_supply], ['Electricity', property.has_electricity], ['Drainage', property.has_drainage], ['Sewage', property.has_sewage]].map(([label, value]) => <MetaItem key={label} label={label} value={value == null ? 'Unknown' : value ? 'Available' : 'Not available'} />)}
             </div>
           </section>
 
@@ -194,6 +217,10 @@ export default function PropertyDetailsPage() {
           <section className="rounded-2xl border border-[#DDE5E3] bg-white p-5 sm:p-6 space-y-4">
             <SectionTitle icon={<MapPin size={16} />} title="Location" />
             <div className="space-y-2 text-sm text-[#637079]">
+              <p><span className="font-medium text-[#263238]">Municipality:</span> {property.municipality || '—'}</p>
+              <p><span className="font-medium text-[#263238]">Ward:</span> {property.ward_number || '—'}</p>
+              <p><span className="font-medium text-[#263238]">Tole:</span> {property.tole || '—'}</p>
+              <p><span className="font-medium text-[#263238]">Landmark / Chowk:</span> {property.landmark || '—'}</p>
               <p><span className="font-medium text-[#263238]">Province:</span> {property.province || '—'}</p>
               <p><span className="font-medium text-[#263238]">District:</span> {property.district || '—'}</p>
               <p><span className="font-medium text-[#263238]">City:</span> {property.city || '—'}</p>
@@ -311,7 +338,7 @@ function formatPrice(price, purpose, currency = 'NPR') {
   const n = Number(price)
   if (Number.isNaN(n)) return `${currency} ${price}`
   const suffix = purpose === 'rent' ? '/mo' : ''
-  return `${currency} ${n.toLocaleString()}${suffix}`
+  return `${currency === 'NPR' ? formatNpr(n) : `${currency} ${n.toLocaleString()}`}${suffix}`
 }
 
 function formatMeasurement(value, unit) {
@@ -344,4 +371,8 @@ function agentBadge(value) {
 function cap(value) {
   if (!value) return '—'
   return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
+function capWords(value) {
+  return value ? value.split('_').map(cap).join(' ') : '—'
 }

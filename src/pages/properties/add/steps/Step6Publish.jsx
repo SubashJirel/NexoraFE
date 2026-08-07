@@ -5,6 +5,8 @@ import { Spinner } from '@/components/ui/index'
 import { useAgents } from '@/hooks/useAgents'
 
 const STATUS_OPTIONS = [
+  { value: 'reserved',          label: 'Reserved — temporarily held' },
+  { value: 'withdrawn',         label: 'Withdrawn — removed by owner or agency' },
   { value: 'draft',             label: 'Draft — save without publishing' },
   { value: 'available',         label: 'Available — visible on website' },
   { value: 'under_negotiation', label: 'Under Negotiation — deal in progress' },
@@ -96,6 +98,7 @@ export default function Step6Publish({ form, errors, onChange }) {
           <option key={s.value} value={s.value}>{s.label}</option>
         ))}
       </Select>
+      {form.status === 'withdrawn' && <div><label className="text-sm font-medium text-[#263238]">Reason for withdrawal<textarea rows="3" value={form.withdrawal_reason} onChange={(event) => onChange('withdrawal_reason', event.target.value)} className="mt-1.5 w-full rounded-lg border border-[#DDE5E3] px-3 py-2 text-sm outline-none focus:border-[#496B5A]" placeholder="e.g. Owner withdrew the listing" /></label></div>}
 
       {/* ── Toggles ──────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-4">

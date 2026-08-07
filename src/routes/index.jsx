@@ -194,6 +194,9 @@ export const router = createBrowserRouter([
         handle: { title: 'Social Media' },
         lazy: () => import('@/pages/social-media/SocialMediaPage').then((m) => ({ Component: m.default })),
       },
+      { path: 'website-content', handle: { title: 'Website Content' }, lazy: () => import('@/pages/website/WebsiteContentPage').then((m) => ({ Component: m.default })) },
+      { path: 'website-submissions', handle: { title: 'Website Submissions' }, lazy: () => import('@/pages/website/WebsiteSubmissionsPage').then((m) => ({ Component: m.default })) },
+      { path: 'agent-reviews', handle: { title: 'Agent Reviews' }, lazy: () => import('@/pages/website/AgentReviewsPage').then((m) => ({ Component: m.default })) },
       // ── Settings ───────────────────────────────────────────
       {
         path: 'settings',

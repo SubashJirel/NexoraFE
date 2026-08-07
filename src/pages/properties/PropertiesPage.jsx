@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
-import { Plus, LayoutGrid, List, Search } from 'lucide-react'
+import { Plus, LayoutGrid, List, Search, FileSpreadsheet } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
 import { useProperties } from '@/hooks/useProperties'
 import PropertyCard from './components/PropertyCard'
@@ -7,6 +8,8 @@ import PropertyFilters from './components/PropertyFilters'
 import Button from '@/components/ui/Button'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { cn } from '@/lib/cn'
+import { downloadPortalExport } from '@/services/propertyDistributionService'
+import { useLocalization } from '@/context/useLocalization'
 
 const EMPTY_FILTERS = {
   property_type:  '',
@@ -17,10 +20,12 @@ const EMPTY_FILTERS = {
 
 export default function PropertiesPage() {
   const navigate = useNavigate()
+  const localization = useLocalization()
 
   const [view, setView]     = useState('grid')
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState(EMPTY_FILTERS)
+  const [isExporting, setIsExporting] = useState(false)
 
   // Build the params object that goes to the API.
   // search maps to the backend's `search` param.
@@ -41,19 +46,32 @@ export default function PropertiesPage() {
     sold:              allProperties.filter((p) => p.status === 'sold').length,
   }), [allProperties])
 
+  async function exportPortalCsv() {
+    setIsExporting(true)
+    try {
+      await downloadPortalExport(allProperties.map((property) => property.id))
+      toast.success('Portal CSV exported.')
+    } catch {
+      toast.error('Could not export property CSV.')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
 
       {/* ── Page header ─────────────────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-[#263238]">Properties</h2>
+          <h2 className="text-2xl font-bold text-[#263238]">{localization.t('Properties')}</h2>
           <p className="mt-1 text-sm text-[#637079]">
             Manage and track your agency's property listings
           </p>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outlined" size="md" leftIcon={<FileSpreadsheet size={15} />} loading={isExporting} disabled={!allProperties.length} onClick={exportPortalCsv}>Portal CSV</Button>
           {/* View toggle */}
           <div className="flex items-center rounded-lg border border-[#DDE5E3] bg-white overflow-hidden">
             <ViewToggle active={view === 'grid'} onClick={() => setView('grid')} aria-label="Grid view">
@@ -84,8 +102,8 @@ export default function PropertiesPage() {
           { label: 'Sold',              value: stats.sold,              color: 'text-red-500'   },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-xl border border-[#DDE5E3] px-4 py-3 flex items-center justify-between">
-            <span className="text-xs text-[#637079] font-medium">{s.label}</span>
-            <span className={cn('text-xl font-bold', s.color)}>{s.value}</span>
+            <span className="text-xs text-[#637079] font-medium">{localization.t(s.label)}</span>
+            <span className={cn('text-xl font-bold', s.color)}>{localization.number(s.value)}</span>
           </div>
         ))}
       </div>
@@ -120,7 +138,7 @@ export default function PropertiesPage() {
       ) : (
         <>
           <p className="text-xs text-[#8b969d]">
-            Showing <span className="font-semibold text-[#263238]">{properties.length}</span> properties
+            Showing <span className="font-semibold text-[#263238]">{localization.number(properties.length)}</span> properties
           </p>
 
           {view === 'grid' ? (

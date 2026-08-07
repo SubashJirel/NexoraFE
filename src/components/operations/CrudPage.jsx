@@ -7,6 +7,7 @@ import Select from '@/components/ui/Select'
 import Textarea from '@/components/ui/Textarea'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { useCreateResource, useDeleteResource, useResource, useUpdateResource } from '@/hooks/useOperations'
+import { useLocalization } from '@/context/useLocalization'
 
 const dateTypes = new Set(['date', 'datetime-local'])
 
@@ -14,16 +15,18 @@ function blankValues(fields) {
   return Object.fromEntries(fields.map((field) => [field.name, field.defaultValue ?? '']))
 }
 
-function displayValue(value, column) {
+function displayValue(value, column, localization) {
   if (value === null || value === undefined || value === '') return '—'
-  if (column.type === 'currency') return `${column.currency || 'NPR'} ${Number(value).toLocaleString()}`
-  if (column.type === 'date') return new Date(value).toLocaleString()
+  if (column.type === 'currency') return localization.currency(value)
+  if (column.type === 'date') return localization.date(value, true)
+  if (column.type === 'phone') return localization.phone(value)
   if (Array.isArray(value)) return value.join(', ')
   if (typeof value === 'boolean') return value ? 'Yes' : 'No'
   return String(value).replaceAll('_', ' ')
 }
 
 export default function CrudPage({ resource, title, description, fields, columns, actions, headerAction, emptyText, customModule }) {
+  const localization = useLocalization()
   const customQuery = useResource('custom-fields', { module: customModule }, { enabled: Boolean(customModule) })
   const effectiveFields = useMemo(() => [
     ...fields,
@@ -89,12 +92,12 @@ export default function CrudPage({ resource, title, description, fields, columns
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div><h2 className="text-2xl font-bold text-[#263238]">{title}</h2><p className="mt-1 max-w-2xl text-sm text-[#637079]">{description}</p></div>
+        <div><h2 className="text-2xl font-bold text-[#263238]">{localization.t(title)}</h2><p className="mt-1 max-w-2xl text-sm text-[#637079]">{description}</p></div>
         <div className="flex gap-2">{headerAction}<Button onClick={openCreate} leftIcon={<Plus size={16} />}>Add {title.replace(/s$/, '')}</Button></div>
       </div>
       <Card className="p-3"><div className="relative"><Search className="absolute left-3 top-2.5 text-[#8b969d]" size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} className="h-9 w-full rounded-lg border border-[#DDE5E3] pl-9 pr-3 text-sm outline-none focus:border-[#496B5A]" placeholder={`Search ${title.toLowerCase()}…`} /></div></Card>
       {query.isError && <Card><p className="text-sm text-red-600">Unable to load {title.toLowerCase()}.</p></Card>}
-      {!query.isError && <Card className="overflow-hidden p-0"><div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-[#F8FAFA] text-[10px] uppercase tracking-wider text-[#637079]"><tr>{columns.map((column) => <th key={column.key} className="px-5 py-3">{column.label}</th>)}<th className="px-5 py-3 text-right">Actions</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id} className="border-t border-[#EEF2F2] hover:bg-[#FAFCFC]">{columns.map((column) => <td key={column.key} className="max-w-[280px] truncate px-5 py-4 text-[#4f5c64]">{column.render ? column.render(row) : displayValue(row[column.key], column)}</td>)}<td className="px-5 py-4"><div className="flex justify-end gap-1">{actions?.map((action) => <Button key={action.label} size="sm" variant="ghost" onClick={() => action.onClick(row)}>{action.label}</Button>)}<Button size="icon" variant="ghost" aria-label="Edit" onClick={() => openEdit(row)}><Edit3 size={15} /></Button><Button size="icon" variant="ghost-danger" aria-label="Delete" onClick={() => { if (window.confirm(`Delete ${row.title || row.full_name || 'this record'}?`)) deleteMutation.mutate(row.id) }}><Trash2 size={15} /></Button></div></td></tr>)}</tbody></table></div>{!rows.length && <p className="py-14 text-center text-sm text-[#637079]">{emptyText || `No ${title.toLowerCase()} yet.`}</p>}</Card>}
+      {!query.isError && <Card className="overflow-hidden p-0"><div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-[#F8FAFA] text-[10px] uppercase tracking-wider text-[#637079]"><tr>{columns.map((column) => <th key={column.key} className="px-5 py-3">{localization.t(column.label)}</th>)}<th className="px-5 py-3 text-right">Actions</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id} className="border-t border-[#EEF2F2] hover:bg-[#FAFCFC]">{columns.map((column) => <td key={column.key} className="max-w-[280px] truncate px-5 py-4 text-[#4f5c64]">{column.render ? column.render(row) : displayValue(row[column.key], column, localization)}</td>)}<td className="px-5 py-4"><div className="flex justify-end gap-1">{actions?.map((action) => <Button key={action.label} size="sm" variant="ghost" onClick={() => action.onClick(row)}>{action.label}</Button>)}<Button size="icon" variant="ghost" aria-label="Edit" onClick={() => openEdit(row)}><Edit3 size={15} /></Button><Button size="icon" variant="ghost-danger" aria-label="Delete" onClick={() => { if (window.confirm(`Delete ${row.title || row.full_name || 'this record'}?`)) deleteMutation.mutate(row.id) }}><Trash2 size={15} /></Button></div></td></tr>)}</tbody></table></div>{!rows.length && <p className="py-14 text-center text-sm text-[#637079]">{emptyText || `No ${title.toLowerCase()} yet.`}</p>}</Card>}
       {formOpen && <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/45 p-4" onMouseDown={(event) => event.target === event.currentTarget && closeForm()}><Card className="max-h-[90vh] w-full max-w-2xl overflow-y-auto"><div className="mb-5 flex items-center justify-between"><h3 className="text-lg font-bold text-[#263238]">{editing ? 'Edit' : 'Add'} {title.replace(/s$/, '')}</h3><Button size="icon" variant="ghost" onClick={closeForm}><X size={18} /></Button></div><form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">{effectiveFields.map((field) => <Field key={field.name} field={field} value={values[field.name]} onChange={(value) => setValues((current) => ({ ...current, [field.name]: value }))} />)}<div className="flex justify-end gap-2 sm:col-span-2"><Button type="button" variant="ghost" onClick={closeForm}>Cancel</Button><Button type="submit" loading={createMutation.isPending || updateMutation.isPending}>{editing ? 'Save changes' : 'Create'}</Button></div></form></Card></div>}
     </div>
   )

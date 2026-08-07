@@ -121,6 +121,65 @@ export async function updatePropertyMedia(mediaId, payload) {
   return data
 }
 
+export async function getPropertyVerification(propertyId) {
+  const { data } = await apiClient.get(`/properties/${propertyId}/verification/`)
+  return data
+}
+
+export async function updatePropertyVerification(propertyId, payload) {
+  const { data } = await apiClient.patch(`/properties/${propertyId}/verification/`, payload)
+  return data
+}
+
+export async function updatePropertyVerificationDocument(propertyId, documentType, payload) {
+  const hasFile = payload.file instanceof File
+  if (!hasFile) {
+    const { data } = await apiClient.patch(
+      `/properties/${propertyId}/verification/documents/${documentType}/`, payload
+    )
+    return data
+  }
+  const form = new FormData()
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) form.append(key, value)
+  })
+  const { data } = await apiClient.patch(
+    `/properties/${propertyId}/verification/documents/${documentType}/`, form,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  )
+  return data
+}
+
+export async function confirmPropertyFreshness(propertyId, payload) {
+  const { data } = await apiClient.post(`/properties/${propertyId}/freshness/confirm/`, payload)
+  return data
+}
+
+export async function requestPropertyRepublish(propertyId) {
+  const { data } = await apiClient.post(`/properties/${propertyId}/republish/request/`)
+  return data
+}
+
+export async function decidePropertyRepublish(propertyId, payload) {
+  const { data } = await apiClient.post(`/properties/${propertyId}/republish/decision/`, payload)
+  return data
+}
+
+export async function getPropertyHistory(propertyId) {
+  const { data } = await apiClient.get(`/properties/${propertyId}/history/`)
+  return data
+}
+
+export async function getPropertyDuplicates(propertyId) {
+  const { data } = await apiClient.get(`/properties/${propertyId}/duplicates/`)
+  return data
+}
+
+export async function updatePropertyDuplicate(flagId, status) {
+  const { data } = await apiClient.patch(`/properties/duplicates/${flagId}/`, { status })
+  return data
+}
+
 /**
  * Orchestrates both APIs as a single atomic action:
  *  1. POST /api/properties/          → get propertyId

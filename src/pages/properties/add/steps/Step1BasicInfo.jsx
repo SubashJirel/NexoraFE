@@ -14,6 +14,7 @@ const PROPERTY_TYPES = [
 const PURPOSES = ['sale', 'rent', 'lease']
 
 const CURRENCIES = ['NPR', 'USD', 'INR']
+const PROVINCES = ['Koshi', 'Madhesh', 'Bagmati', 'Gandaki', 'Lumbini', 'Karnali', 'Sudurpashchim']
 
 export default function Step1BasicInfo({ form, errors, onChange }) {
   return (
@@ -91,13 +92,15 @@ export default function Step1BasicInfo({ form, errors, onChange }) {
       </div>
 
       {/* Province */}
-      <Input
+      <Select
         label="Province"
-        placeholder="e.g. Bagmati Province"
         value={form.province}
         onChange={(e) => onChange('province', e.target.value)}
         error={errors.province}
-      />
+      >
+        <option value="">Select province</option>
+        {PROVINCES.map((province) => <option key={province} value={province}>{province} Province</option>)}
+      </Select>
     </div>
   )
 }

@@ -13,7 +13,7 @@ const EMPTY = {
   full_name:          '',
   phone:              '',
   email:              '',
-  source:             'website',
+  source:             'phone',
   status:             'new',
   assigned_agent:     '',
   budget_min:         '',
