@@ -19,10 +19,18 @@ export async function deleteDistributionLink(id) {
   await apiClient.delete(`/properties/distribution/links/${id}/`)
 }
 
-export async function downloadDistributionAsset(propertyId, assetType, linkId = '') {
+export async function downloadDistributionAsset(propertyId, assetType, linkId = '', localization = {}) {
   const response = await apiClient.get(
     `/properties/${propertyId}/distribution/assets/${assetType}/`,
-    { params: linkId ? { link: linkId } : {}, responseType: 'blob' }
+    {
+      params: {
+        ...(linkId ? { link: linkId } : {}),
+        language: localization.language,
+        date_system: localization.dateSystem,
+        nepali_digits: localization.nepaliDigits,
+      },
+      responseType: 'blob',
+    }
   )
   const header = response.headers['content-disposition'] || ''
   const filename = header.match(/filename="?([^";]+)"?/i)?.[1] || `property-${assetType}`

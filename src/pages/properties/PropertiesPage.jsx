@@ -9,6 +9,7 @@ import Button from '@/components/ui/Button'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { cn } from '@/lib/cn'
 import { downloadPortalExport } from '@/services/propertyDistributionService'
+import { useLocalization } from '@/context/useLocalization'
 
 const EMPTY_FILTERS = {
   property_type:  '',
@@ -19,6 +20,7 @@ const EMPTY_FILTERS = {
 
 export default function PropertiesPage() {
   const navigate = useNavigate()
+  const localization = useLocalization()
 
   const [view, setView]     = useState('grid')
   const [search, setSearch] = useState('')
@@ -62,7 +64,7 @@ export default function PropertiesPage() {
       {/* ── Page header ─────────────────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-[#263238]">Properties</h2>
+          <h2 className="text-2xl font-bold text-[#263238]">{localization.t('Properties')}</h2>
           <p className="mt-1 text-sm text-[#637079]">
             Manage and track your agency's property listings
           </p>
@@ -100,8 +102,8 @@ export default function PropertiesPage() {
           { label: 'Sold',              value: stats.sold,              color: 'text-red-500'   },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-xl border border-[#DDE5E3] px-4 py-3 flex items-center justify-between">
-            <span className="text-xs text-[#637079] font-medium">{s.label}</span>
-            <span className={cn('text-xl font-bold', s.color)}>{s.value}</span>
+            <span className="text-xs text-[#637079] font-medium">{localization.t(s.label)}</span>
+            <span className={cn('text-xl font-bold', s.color)}>{localization.number(s.value)}</span>
           </div>
         ))}
       </div>
@@ -136,7 +138,7 @@ export default function PropertiesPage() {
       ) : (
         <>
           <p className="text-xs text-[#8b969d]">
-            Showing <span className="font-semibold text-[#263238]">{properties.length}</span> properties
+            Showing <span className="font-semibold text-[#263238]">{localization.number(properties.length)}</span> properties
           </p>
 
           {view === 'grid' ? (

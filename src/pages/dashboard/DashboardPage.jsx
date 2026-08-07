@@ -13,6 +13,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useDashboardSummary } from '@/hooks/useDashboardSummary'
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
+import { useLocalization } from '@/context/useLocalization'
 
 const STATUS_BADGE = {
   new: { variant: 'info', label: 'New' },
@@ -55,11 +56,12 @@ function EmptyState({ children }) {
 }
 
 export default function DashboardPage() {
+  const localization = useLocalization()
   const user = useAuthStore((s) => s.user)
   const { data, isLoading, isError, error } = useDashboardSummary()
 
   const hour = new Date().getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  const greeting = localization.t(hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening')
 
   const totals = data?.totals || {}
   const followUps = data?.follow_ups || {}
@@ -71,7 +73,7 @@ export default function DashboardPage() {
   const stats = [
     {
       label: 'Total Leads',
-      value: totals.leads ?? 0,
+      value: localization.number(totals.leads ?? 0),
       helperText: `${totals.new_leads ?? 0} new leads`,
       icon: PhoneCall,
       color: 'text-[#496B5A]',
@@ -79,7 +81,7 @@ export default function DashboardPage() {
     },
     {
       label: 'Properties',
-      value: totals.properties ?? 0,
+      value: localization.number(totals.properties ?? 0),
       helperText: `${totals.published_properties ?? 0} published`,
       icon: Home,
       color: 'text-[#6FAFA8]',
@@ -87,7 +89,7 @@ export default function DashboardPage() {
     },
     {
       label: 'Site Visits Today',
-      value: siteVisits.today ?? 0,
+      value: localization.number(siteVisits.today ?? 0),
       helperText: `${siteVisits.upcoming ?? 0} upcoming`,
       icon: CalendarCheck,
       color: 'text-amber-600',
@@ -95,7 +97,7 @@ export default function DashboardPage() {
     },
     {
       label: 'Inquiries',
-      value: totals.inquiries ?? 0,
+      value: localization.number(totals.inquiries ?? 0),
       helperText: `${totals.property_views ?? 0} total views`,
       icon: Handshake,
       color: 'text-[#496B5A]',
@@ -103,7 +105,7 @@ export default function DashboardPage() {
     },
     {
       label: 'Agents',
-      value: totals.agents ?? 0,
+      value: localization.number(totals.agents ?? 0),
       helperText: 'Active team members',
       icon: Users,
       color: 'text-[#8FAF9B]',
@@ -111,7 +113,7 @@ export default function DashboardPage() {
     },
     {
       label: 'Follow-ups Due',
-      value: (followUps.overdue ?? 0) + (followUps.due_today ?? 0),
+      value: localization.number((followUps.overdue ?? 0) + (followUps.due_today ?? 0)),
       helperText: `${followUps.upcoming ?? 0} upcoming`,
       icon: AlertCircle,
       color: 'text-blue-600',
@@ -152,7 +154,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
         {stats.map((stat) => (
-          <StatCard key={stat.label} {...stat} value={isLoading ? '—' : stat.value} />
+          <StatCard key={stat.label} {...stat} label={localization.t(stat.label)} value={isLoading ? '—' : stat.value} />
         ))}
       </div>
 
@@ -160,7 +162,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-2 space-y-6">
           <Card padding="md">
             <CardHeader>
-              <CardTitle>Leads by Status</CardTitle>
+              <CardTitle>{localization.t('Leads by Status')}</CardTitle>
               <Link to="/leads" className="text-xs font-medium text-[#496B5A] hover:underline">
                 View all →
               </Link>
@@ -177,7 +179,7 @@ export default function DashboardPage() {
                           {formatStatusLabel(status)}
                         </Badge>
                       </div>
-                      <span className="text-sm font-semibold text-[#263238]">{count}</span>
+                      <span className="text-sm font-semibold text-[#263238]">{localization.number(count)}</span>
                     </div>
                   ))}
                 </div>
@@ -189,7 +191,7 @@ export default function DashboardPage() {
 
           <Card padding="md">
             <CardHeader>
-              <CardTitle>Top Properties</CardTitle>
+              <CardTitle>{localization.t('Top Properties')}</CardTitle>
               <Link to="/properties" className="text-xs font-medium text-[#496B5A] hover:underline">
                 View all →
               </Link>
@@ -229,7 +231,7 @@ export default function DashboardPage() {
         <div className="space-y-6">
           <Card padding="md">
             <CardHeader>
-              <CardTitle>Lead Sources</CardTitle>
+              <CardTitle>{localization.t('Lead Sources')}</CardTitle>
             </CardHeader>
             <CardBody>
               {isLoading ? (
@@ -244,7 +246,7 @@ export default function DashboardPage() {
                         </div>
                         <span className="truncate text-sm font-medium capitalize text-[#263238]">{source}</span>
                       </div>
-                      <span className="text-sm font-semibold text-[#263238]">{count}</span>
+                      <span className="text-sm font-semibold text-[#263238]">{localization.number(count)}</span>
                     </div>
                   ))}
                 </div>
@@ -256,7 +258,7 @@ export default function DashboardPage() {
 
           <Card padding="md">
             <CardHeader>
-              <CardTitle>Quick Overview</CardTitle>
+              <CardTitle>{localization.t('Quick Overview')}</CardTitle>
             </CardHeader>
             <CardBody>
               <div className="space-y-3">

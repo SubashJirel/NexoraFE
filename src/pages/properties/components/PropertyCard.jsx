@@ -5,6 +5,8 @@ import { cn } from '@/lib/cn'
 import Avatar from '@/components/ui/Avatar'
 import Badge from '@/components/ui/Badge'
 import { useDeleteProperty } from '@/hooks/useDeleteProperty'
+import { useLocalization } from '@/context/useLocalization'
+import { formatAddress } from '@/lib/localization'
 
 // ── Status config ─────────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -19,17 +21,14 @@ const STATUS_CONFIG = {
 
 // ── Purpose pill ──────────────────────────────────────────────
 // ── Price formatter ───────────────────────────────────────────
-function formatPrice(price, purpose) {
-  const n = Number(price)
-  if (isNaN(n)) return price
-  const suffix = purpose === 'rent' ? '/mo' : ''
-  if (n >= 10000000) return `NPR ${(n / 10000000).toFixed(1).replace(/\.0$/, '')} Crore${suffix}`
-  if (n >= 100000)   return `NPR ${(n / 100000).toFixed(1).replace(/\.0$/, '')} Lakh${suffix}`
-  return `NPR ${n.toLocaleString()}${suffix}`
+function formatPrice(price, purpose, localization) {
+  const suffix = purpose === 'rent' ? (localization.language === 'ne' ? ' / महिना' : ' / month') : ''
+  return `${localization.currency(price)}${suffix}`
 }
 
 // ── Property type icons ───────────────────────────────────────
 export default function PropertyCard({ property, view = 'grid' }) {
+  const localization = useLocalization()
   const [liked, setLiked] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const navigate = useNavigate()
@@ -117,7 +116,7 @@ export default function PropertyCard({ property, view = 'grid' }) {
         {/* Location */}
         <p className="flex items-center gap-1 text-xs text-[#637079]">
           <MapPin size={12} className="text-[#8FAF9B] shrink-0" />
-          <span className="truncate">{property.city}, {property.district}</span>
+          <span className="truncate">{formatAddress(property, localization) || property.address}</span>
         </p>
 
         {/* Specs */}
@@ -139,7 +138,7 @@ export default function PropertyCard({ property, view = 'grid' }) {
 
         {/* Price */}
         <p className="text-base font-extrabold text-[#263238] tracking-tight">
-          {formatPrice(property.price, property.purpose)}
+          {formatPrice(property.price, property.purpose, localization)}
         </p>
 
         {/* Divider */}
@@ -167,6 +166,7 @@ export default function PropertyCard({ property, view = 'grid' }) {
 
 // ── List view row ─────────────────────────────────────────────
 function PropertyListRow({ property, status, imageUrl, liked, setLiked }) {
+  const localization = useLocalization()
   const isCommercial = property.property_type === 'commercial'
 
   return (
@@ -191,7 +191,7 @@ function PropertyListRow({ property, status, imageUrl, liked, setLiked }) {
           <h3 className="text-sm font-bold text-[#263238] truncate">{property.title}</h3>
           <p className="flex items-center gap-1 text-xs text-[#637079]">
             <MapPin size={11} className="text-[#8FAF9B]" />
-            {property.address}
+            {formatAddress(property, localization) || property.address}
           </p>
           <div className="flex items-center gap-3 text-xs text-[#637079]">
             {!isCommercial && property.bedrooms  != null && <Spec icon={<Bed  size={12} className="text-[#6FAFA8]" />} label={`${property.bedrooms} Beds`} />}
@@ -202,7 +202,7 @@ function PropertyListRow({ property, status, imageUrl, liked, setLiked }) {
 
         <div className="text-right shrink-0 space-y-1">
           <p className="text-base font-extrabold text-[#263238]">
-            {formatPrice(property.price, property.purpose)}
+            {formatPrice(property.price, property.purpose, localization)}
           </p>
           <div className="flex items-center justify-end gap-3 text-[10px] text-[#8b969d]">
             <StatChip icon={<PhoneCall size={11} />} value={property.leads ?? 0} label="LEADS" />

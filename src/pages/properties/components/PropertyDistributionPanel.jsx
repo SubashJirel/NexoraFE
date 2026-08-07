@@ -18,6 +18,7 @@ import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
+import { useLocalization } from '@/context/useLocalization'
 
 const ASSET_ICONS = {
   facebook_post: Share2,
@@ -54,19 +55,21 @@ export default function PropertyDistributionPanel({ propertyId }) {
 
 function ToolkitHeader({ propertyId, data }) {
   const download = useDownloadDistributionAsset(propertyId)
+  const localization = useLocalization()
   return <div className="flex flex-col justify-between gap-4 border-b border-[#EEF2F2] pb-5 lg:flex-row lg:items-center">
     <div><div className="flex items-center gap-2"><Share2 size={18} className="text-[#496B5A]" /><h3 className="text-lg font-semibold text-[#263238]">Listing distribution toolkit</h3><Badge variant="success">{data.property.display_property_id}</Badge></div><p className="mt-1 text-sm text-[#637079]">Create once, then distribute consistent branded material across every sales channel.</p><button type="button" onClick={() => copyText(data.public_url, 'Public property link copied.')} className="mt-2 flex max-w-full items-center gap-1.5 text-left text-xs font-medium text-[#496B5A]"><Link2 size={13} /><span className="truncate">{data.public_url}</span><Copy size={12} /></button></div>
-    <Button size="lg" leftIcon={<Download size={16} />} loading={download.isPending} onClick={() => download.mutate({ assetType: 'media_package' })}>Download complete package</Button>
+    <Button size="lg" leftIcon={<Download size={16} />} loading={download.isPending} onClick={() => download.mutate({ assetType: 'media_package', localization })}>Download complete package</Button>
   </div>
 }
 
 function AssetLibrary({ propertyId, assets, links }) {
   const download = useDownloadDistributionAsset(propertyId)
+  const localization = useLocalization()
   const [linkId, setLinkId] = useState('')
   const [active, setActive] = useState('')
   function get(assetType) {
     setActive(assetType)
-    download.mutate({ assetType, linkId }, { onSettled: () => setActive('') })
+    download.mutate({ assetType, linkId, localization }, { onSettled: () => setActive('') })
   }
   return <div><div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-end"><div><h4 className="text-sm font-semibold text-[#263238]">Downloadable assets</h4><p className="mt-0.5 text-xs text-[#637079]">Every QR and creative can use a tracked campaign link.</p></div><div className="w-full sm:w-64"><Select size="sm" label="Link embedded in assets" value={linkId} onChange={(event) => setLinkId(event.target.value)}><option value="">Standard public link</option>{links.filter((link) => link.is_active).map((link) => <option key={link.id} value={link.id}>{link.label || link.source}</option>)}</Select></div></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{assets.map((asset) => { const Icon = ASSET_ICONS[asset.type] || Download; return <button key={asset.type} type="button" onClick={() => get(asset.type)} className={`flex items-center gap-3 rounded-xl border p-4 text-left transition hover:border-[#8FAF9B] hover:bg-[#F8FAFA] ${asset.type === 'media_package' ? 'border-[#8FAF9B] bg-[#eef3f0]' : 'border-[#DDE5E3]'}`}><span className="rounded-lg bg-white p-2 text-[#496B5A] shadow-sm"><Icon size={17} /></span><span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-[#263238]">{asset.label}</span><span className="text-[11px] uppercase text-[#8b969d]">{active === asset.type ? 'Generating...' : asset.extension}</span></span><Download size={14} className="text-[#637079]" /></button> })}</div></div>
 }

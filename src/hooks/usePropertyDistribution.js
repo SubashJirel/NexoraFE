@@ -42,7 +42,7 @@ export const useDeleteDistributionLink = (propertyId) =>
 
 export function useDownloadDistributionAsset(propertyId) {
   return useMutation({
-    mutationFn: ({ assetType, linkId }) => downloadDistributionAsset(propertyId, assetType, linkId),
+    mutationFn: ({ assetType, linkId, localization }) => downloadDistributionAsset(propertyId, assetType, linkId, localization),
     onSuccess: (filename) => toast.success(`${filename} downloaded.`),
     onError: (error) => toast.error(message(error, 'Could not generate this asset.')),
   })
