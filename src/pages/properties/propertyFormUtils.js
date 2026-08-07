@@ -7,6 +7,7 @@ export const INITIAL_FORM = {
   province: '',
   district: '',
   city: '',
+  municipality: '', ward_number: '', tole: '', landmark: '',
   neighbourhood: '',
   address: '',
   latitude: '',
@@ -20,6 +21,10 @@ export const INITIAL_FORM = {
   built_up_area_unit: 'sqft',
   road_access_value: '',
   road_access_unit: 'ft',
+  land_use_classification: '', road_type: '', facing_direction: '',
+  mohada_value: '', pichhad_value: '', plot_dimension_unit: 'ft', plot_shape: '',
+  has_water_supply: null, has_electricity: null, has_drainage: null, has_sewage: null,
+  major_road_type: '', nearest_major_road: '', major_road_distance_value: '', major_road_distance_unit: 'm',
   amenities: '',
   virtual_tour_url: '',
   video_tour_url: '',
@@ -49,6 +54,8 @@ export function validateStep(step, form) {
   if (step === 2) {
     if (!form.district) errors.district = 'Select a district'
     if (!form.city.trim()) errors.city = 'City is required'
+    if (!form.municipality.trim()) errors.municipality = 'Municipality is required'
+    if (form.ward_number && (Number(form.ward_number) < 1 || Number(form.ward_number) > 99)) errors.ward_number = 'Enter ward 1–99'
     if (!form.address.trim()) errors.address = 'Address is required'
   }
 
@@ -67,6 +74,8 @@ export function buildPropertyPayload(form) {
     province: form.province.trim(),
     district: form.district,
     city: form.city.trim(),
+    municipality: form.municipality.trim(), ward_number: String(form.ward_number || ''),
+    tole: form.tole.trim(), landmark: form.landmark.trim(),
     neighbourhood: form.neighbourhood.trim() || '',
     address: form.address.trim(),
     latitude: form.latitude || null,
@@ -80,6 +89,15 @@ export function buildPropertyPayload(form) {
     built_up_area_unit: form.built_up_area_unit,
     road_access_value: form.road_access_value || null,
     road_access_unit: form.road_access_unit,
+    land_use_classification: form.land_use_classification, road_type: form.road_type,
+    facing_direction: form.facing_direction || null,
+    mohada_value: form.mohada_value || null, pichhad_value: form.pichhad_value || null,
+    plot_dimension_unit: form.plot_dimension_unit, plot_shape: form.plot_shape,
+    has_water_supply: form.has_water_supply, has_electricity: form.has_electricity,
+    has_drainage: form.has_drainage, has_sewage: form.has_sewage,
+    major_road_type: form.major_road_type, nearest_major_road: form.nearest_major_road.trim(),
+    major_road_distance_value: form.major_road_distance_value || null,
+    major_road_distance_unit: form.major_road_distance_unit,
     amenities: form.amenities || '',
     virtual_tour_url: form.virtual_tour_url || '',
     video_tour_url: form.video_tour_url || '',
@@ -107,6 +125,8 @@ export function propertyToForm(property) {
     province: property.province ?? '',
     district: property.district ?? '',
     city: property.city ?? '',
+    municipality: property.municipality ?? '', ward_number: property.ward_number ?? '',
+    tole: property.tole ?? '', landmark: property.landmark ?? '',
     neighbourhood: property.neighbourhood ?? '',
     address: property.address ?? '',
     latitude: property.latitude ?? '',
@@ -120,6 +140,15 @@ export function propertyToForm(property) {
     built_up_area_unit: property.built_up_area_unit ?? 'sqft',
     road_access_value: property.road_access_value ?? '',
     road_access_unit: property.road_access_unit ?? 'ft',
+    land_use_classification: property.land_use_classification ?? '', road_type: property.road_type ?? '',
+    facing_direction: property.facing_direction ?? '', mohada_value: property.mohada_value ?? '',
+    pichhad_value: property.pichhad_value ?? '', plot_dimension_unit: property.plot_dimension_unit ?? 'ft',
+    plot_shape: property.plot_shape ?? '', has_water_supply: property.has_water_supply ?? null,
+    has_electricity: property.has_electricity ?? null, has_drainage: property.has_drainage ?? null,
+    has_sewage: property.has_sewage ?? null, major_road_type: property.major_road_type ?? '',
+    nearest_major_road: property.nearest_major_road ?? '',
+    major_road_distance_value: property.major_road_distance_value ?? '',
+    major_road_distance_unit: property.major_road_distance_unit ?? 'm',
     amenities: property.amenities ?? '',
     virtual_tour_url: property.virtual_tour_url ?? '',
     video_tour_url: property.video_tour_url ?? '',
