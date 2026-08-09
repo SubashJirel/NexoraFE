@@ -93,7 +93,7 @@ export default function LeadDrawer({ lead, onClose, onEdit }) {
         </div>
 
         {/* ── Tab content ── */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="hover-scrollbar flex-1 overflow-y-auto">
           {tab === 'overview'     && <OverviewTab     lead={lead} />}
           {tab === 'interactions' && <InteractionsTab lead={lead} />}
           {tab === 'interests'    && <InterestsTab    lead={lead} />}
@@ -114,7 +114,7 @@ function StatusStepper({ lead }) {
 
   return (
     <div className="px-5 py-3 bg-[#F8FAFA] border-b border-[#DDE5E3] shrink-0">
-      <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+      <div className="flex items-center gap-1 overflow-x-auto hover-scrollbar">
         {pipeline.map((s, i) => {
           const info   = STATUS_MAP[s]
           const past   = i < currentIdx

@@ -150,7 +150,7 @@ export default function Sidebar() {
           </span>
         </div>
 
-        <nav className="hover-scrollbar flex-1 overflow-y-auto overflow-x-hidden py-4">
+        <nav className="hover-scrollbar-dark flex-1 overflow-y-auto overflow-x-hidden py-4">
           {sections.map((section) => (
             <div key={section.group} className="mb-4">
               <p className={cn(

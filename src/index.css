@@ -1,3 +1,4 @@
+
 @import './styles/tokens.css';
 @import 'tailwindcss';
 
@@ -9,37 +10,49 @@
   }
 }
 
-/* Subtle hover scrollbar — hidden by default, appears on hover */
-.hover-scrollbar {
+/* ── Global: hide all scrollbars at rest ────────────────────── */
+* {
   scrollbar-width: none;
-  -ms-overflow-style: none;
 }
 
-.hover-scrollbar::-webkit-scrollbar {
+*::-webkit-scrollbar {
   width: 4px;
-  opacity: 0;
-  transition: opacity 0.3s;
+  height: 4px;
 }
 
-.hover-scrollbar::-webkit-scrollbar-track {
+*::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.hover-scrollbar::-webkit-scrollbar-thumb {
+*::-webkit-scrollbar-thumb {
   background: transparent;
   border-radius: 999px;
-  transition: background 0.3s;
 }
 
+/* ── hover-scrollbar: subtle scrollbar on hover (light bg) ──── */
 .hover-scrollbar:hover {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  scrollbar-color: rgba(38, 50, 56, 0.2) transparent;
 }
 
 .hover-scrollbar:hover::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(38, 50, 56, 0.2);
 }
 
 .hover-scrollbar:hover::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(38, 50, 56, 0.38);
+}
+
+/* ── hover-scrollbar-dark: subtle scrollbar on hover (dark bg) ─ */
+.hover-scrollbar-dark:hover {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+.hover-scrollbar-dark:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.hover-scrollbar-dark:hover::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.38);
 }
