@@ -31,7 +31,8 @@ export default function VerifyLoginOTPPage() {
       const data = await verifyLoginOTP({ email, otp })
       setAuth(data.user, data.access, data.refresh, data.agency)
       toast.success(data.message || 'Email verified.')
-      navigate(destination, { replace: true })
+      const nextRoute = data.next_route === '/onboarding/website' ? data.next_route : destination
+      navigate(nextRoute, { replace: true })
     } catch (requestError) {
       setError(requestError.response?.data?.detail || 'The code is invalid or expired.')
     } finally {

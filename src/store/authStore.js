@@ -55,6 +55,10 @@ export const useAuthStore = create(
         set((state) => ({ user: { ...state.user, ...updates } }))
       },
 
+      updateAgency: (updates) => {
+        set((state) => ({ agency: { ...state.agency, ...updates } }))
+      },
+
       setTokens: ({ access, refresh }) => {
         set((state) => ({
           token: access ?? state.token,

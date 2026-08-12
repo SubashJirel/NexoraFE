@@ -73,6 +73,7 @@ const NAV_ITEMS = [
     group: 'Marketing',
     items: [
       { label: 'Social Media', to: '/social-media', icon: Share2 },
+      { label: 'Website Creator', to: '/onboarding/website', icon: Globe2, roles: ['agency_owner', 'agency_manager', 'super_admin'] },
       { label: 'Website Content', to: '/website-content', icon: Globe2, roles: ['agency_owner', 'agency_manager', 'super_admin'] },
       { label: 'Web Submissions', to: '/website-submissions', icon: MessageCircle },
       { label: 'Agent Reviews', to: '/agent-reviews', icon: Star, roles: ['agency_owner', 'agency_manager', 'super_admin'] },

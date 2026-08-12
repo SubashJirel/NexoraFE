@@ -5,10 +5,14 @@ import { useAuthStore } from '@/store/authStore'
  * RequireGuest — redirects authenticated users away from auth pages (login, signup).
  */
 export default function RequireGuest({ children }) {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user, agency } = useAuthStore()
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />
+    const needsWebsiteSetup =
+      ['agency_owner', 'agency_manager'].includes(user?.role) &&
+      agency?.website_onboarding_status !== 'completed'
+
+    return <Navigate to={needsWebsiteSetup ? '/onboarding/website' : '/dashboard'} replace />
   }
 
   return children

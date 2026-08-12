@@ -42,7 +42,8 @@ export default function LoginPage() {
       // data: { message, access, refresh, user, agency }
       setAuth(data.user, data.access, data.refresh, data.agency)
       toast.success(data.message || 'Welcome back!')
-      navigate(from, { replace: true })
+      const destination = data.next_route === '/onboarding/website' ? data.next_route : from
+      navigate(destination, { replace: true })
     } catch (err) {
       if (err.response?.data?.payment_required) {
         navigate('/payment-required', {
