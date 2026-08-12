@@ -8,10 +8,20 @@ import {
   getPropertyDistribution,
   updateDistributionLink,
 } from '@/services/propertyDistributionService'
+import { publishSocialPost } from '@/services/socialPostService'
 
 export const DISTRIBUTION_KEY = (propertyId) => ['properties', propertyId, 'distribution']
 const message = (error, fallback) =>
-  error?.response?.data?.detail || Object.values(error?.response?.data || {}).flat().join(' ') || fallback
+  error?.response?.data?.detail ||
+  error?.response?.data?.error_message ||
+  error?.response?.data?.publish_results
+    ?.map((result) => result.error_message)
+    .filter(Boolean)
+    .join(' | ') ||
+  Object.values(error?.response?.data || {})
+    .filter((value) => typeof value === 'string')
+    .join(' ') ||
+  fallback
 
 export function usePropertyDistribution(propertyId) {
   return useQuery({
@@ -51,11 +61,45 @@ export function useDownloadDistributionAsset(propertyId) {
 export function useCreateDistributionSocialDraft(propertyId) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (payload) => createDistributionSocialDraft(propertyId, payload),
-    onSuccess: (post, payload) => {
-      queryClient.invalidateQueries({ queryKey: ['social-posts'] })
-      toast.success(payload.publish_now && post.status === 'published' ? 'Property published.' : 'Social draft created.')
+    mutationFn: async (payload) => {
+      const { publish_now: publishNow, ...draftPayload } = payload
+      const draft = await createDistributionSocialDraft(propertyId, draftPayload)
+
+      if (!publishNow) return draft
+
+      try {
+        return await publishSocialPost(draft.id, [draft.platform])
+      } catch (error) {
+        // Preserve this for actionable timeout messaging: the draft exists even
+        // if the browser could not wait for Meta to finish publishing it.
+        error.distributionDraft = draft
+        throw error
+      }
     },
-    onError: (error) => toast.error(message(error, 'Could not create the social post.')),
+    onSuccess: (post, payload) => {
+      if (!payload.publish_now) {
+        toast.success('Social draft created.')
+      } else if (post.status === 'published') {
+        toast.success('Property post published.')
+      } else if (post.status === 'partial') {
+        const detail = post.error_message || 'One or more targets failed.'
+        toast.error(`Property post was only partially published. ${detail}`)
+      } else {
+        toast.error(post.error_message || 'Meta did not publish the property post.')
+      }
+    },
+    onError: (error) => {
+      if (error.code === 'ECONNABORTED' && error.distributionDraft) {
+        toast.error(
+          'The draft was created, but Meta is taking longer than expected. Check Social Media before retrying.',
+        )
+        return
+      }
+      toast.error(message(error, 'Could not create or publish the social post.'))
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['social-posts'] })
+      queryClient.invalidateQueries({ queryKey: DISTRIBUTION_KEY(propertyId) })
+    },
   })
 }
