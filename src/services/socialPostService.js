@@ -84,7 +84,13 @@ export async function getSocialPosts(params = {}) {
  * @param {string[]} platforms - e.g. ["facebook"] or ["facebook", "instagram"]
  */
 export async function publishSocialPost(id, platforms) {
-  const { data } = await apiClient.post(`/social-posts/posts/${id}/publish/`, { platforms })
+  const { data } = await apiClient.post(
+    `/social-posts/posts/${id}/publish/`,
+    { platforms },
+    // Meta image publication can legitimately take longer than the default
+    // API timeout, especially while Instagram processes its media container.
+    { timeout: 120000 },
+  )
   return data
 }
 
