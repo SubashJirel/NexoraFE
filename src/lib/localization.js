@@ -26,6 +26,11 @@ export const TRANSLATIONS = {
     'Total Leads': 'कुल लिड', 'Site Visits Today': 'आजका साइट भिजिट', Inquiries: 'सोधपुछ', 'Follow-ups Due': 'बाँकी फलो-अप',
     'Leads by Status': 'स्थितिअनुसार लिड', 'Top Properties': 'शीर्ष सम्पत्ति', 'Lead Sources': 'लिड स्रोत', 'Quick Overview': 'छोटो अवलोकन',
     'Total Listings': 'कुल लिस्टिङ', Available: 'उपलब्ध', 'Under Negotiation': 'वार्तामा', Sold: 'बिक्री भएको',
+    'Website Creator': 'वेबसाइट निर्माता', Add: 'थप्नुहोस्', Edit: 'सम्पादन', Create: 'सिर्जना गर्नुहोस्', Cancel: 'रद्द गर्नुहोस्', Actions: 'कार्यहरू', Search: 'खोज्नुहोस्', Select: 'छान्नुहोस्',
+    Yes: 'हो', No: 'होइन', Remove: 'हटाउनुहोस्', Retry: 'पुनः प्रयास', Status: 'स्थिति', Priority: 'प्राथमिकता', Due: 'म्याद', Task: 'कार्य',
+    'Task title': 'कार्य शीर्षक', 'Due date & time': 'म्याद र समय', 'Assigned to': 'जिम्मेवारी', Recurrence: 'दोहोरिने अवधि', Lead: 'लिड', Deal: 'डिल', Property: 'सम्पत्ति', Description: 'विवरण',
+    'Mark all read': 'सबै पढिएको चिन्ह लगाउनुहोस्', 'You are all caught up.': 'सबै सूचना हेरिसक्नुभयो।',
+    'Save draft': 'मस्यौदा सुरक्षित गर्नुहोस्', 'Save & continue': 'सुरक्षित गरी अगाडि बढ्नुहोस्', Back: 'पछाडि', Publish: 'प्रकाशित गर्नुहोस्',
   },
 }
 

@@ -210,7 +210,40 @@ export async function createPropertyWithMedia(propertyPayload, mediaFiles = []) 
     property.media = results
       .filter((r) => r.status === 'fulfilled')
       .map((r) => r.value)
+    property.media_upload_failures = results.flatMap((result, index) => result.status === 'rejected' ? [{
+      file: mediaFiles[index],
+      index,
+      message: mediaUploadError(result.reason),
+    }] : [])
   }
 
   return property
+}
+
+export async function retryPropertyMediaFailures(propertyId, failures = []) {
+  const results = await Promise.allSettled(failures.map((failure) =>
+    uploadPropertyMedia(propertyId, {
+      file: failure.file,
+      media_type: failure.file.type.startsWith('video') ? 'video' : 'image',
+      is_primary: failure.index === 0,
+      sort_order: failure.index,
+      title: failure.file.name.replace(/\.[^.]+$/, ''),
+    })
+  ))
+  return {
+    uploaded: results.flatMap((result) => result.status === 'fulfilled' ? [result.value] : []),
+    failures: results.flatMap((result, index) => result.status === 'rejected' ? [{
+      ...failures[index],
+      message: mediaUploadError(result.reason),
+    }] : []),
+  }
+}
+
+function mediaUploadError(error) {
+  const data = error?.response?.data
+  if (data?.detail) return data.detail
+  const first = data && Object.values(data)[0]
+  if (Array.isArray(first)) return first[0]
+  if (typeof first === 'string') return first
+  return error?.message || 'Upload failed.'
 }

@@ -47,3 +47,24 @@ export async function unpublishWebsite() {
   const { data } = await apiClient.post('/agencies/me/website/unpublish/')
   return data
 }
+
+export async function uploadWebsiteMedia({ kind, file, onUploadProgress }) {
+  const form = new FormData()
+  form.append('kind', kind)
+  form.append('file', file)
+  const { data } = await apiClient.post('/agencies/me/website-onboarding/media/', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress,
+  })
+  return data
+}
+
+export async function removeWebsiteMedia(kind, path) {
+  const { data } = await apiClient.delete('/agencies/me/website-onboarding/media/', { data: { kind, path } })
+  return data
+}
+
+export async function validateWebsite() {
+  const { data } = await apiClient.post('/agencies/me/website-onboarding/validate/')
+  return data
+}

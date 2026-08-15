@@ -10,6 +10,10 @@ export async function login(credentials) {
   return data
 }
 
+export async function logout(refresh) {
+  await apiClient.post('/auth/logout/', { refresh })
+}
+
 /**
  * POST /api/auth/register/
  * @param {{ full_name: string, email: string, password: string, agency_name: string, license_number: string }} payload

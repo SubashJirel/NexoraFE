@@ -21,12 +21,17 @@ export function useCreateProperty({ onSuccess } = {}) {
       createPropertyWithMedia(propertyPayload, mediaFiles),
 
     onSuccess: (newProperty) => {
+      const { media_upload_failures: mediaUploadFailures = [], ...cacheProperty } = newProperty
       // Optimistically prepend to cached list so the listing page
       // shows the new property immediately without a full refetch.
-      queryClient.setQueryData(PROPERTIES_KEY, (old = []) => [newProperty, ...old])
+      queryClient.setQueryData(PROPERTIES_KEY, (old = []) => [cacheProperty, ...old])
       // Then invalidate to sync with the server in the background
       queryClient.invalidateQueries({ queryKey: PROPERTIES_KEY })
-      toast.success('Property created successfully!')
+      if (mediaUploadFailures.length) {
+        toast.error(`Property created, but ${mediaUploadFailures.length} media file${mediaUploadFailures.length === 1 ? '' : 's'} failed to upload.`)
+      } else {
+        toast.success('Property and media created successfully!')
+      }
       onSuccess?.(newProperty)
     },
 

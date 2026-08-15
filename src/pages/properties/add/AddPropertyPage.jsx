@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
+import { AlertTriangle, Check, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useCreateProperty } from '@/hooks/useCreateProperty'
 import Button from '@/components/ui/Button'
 import { INITIAL_FORM, validateStep, buildPropertyPayload } from '../propertyFormUtils'
 import { useResource } from '@/hooks/useOperations'
+import { retryPropertyMediaFailures } from '@/services/propertyService'
 
 import Step1BasicInfo   from './steps/Step1BasicInfo'
 import Step2Location    from './steps/Step2Location'
@@ -29,11 +30,33 @@ export default function AddPropertyPage() {
   const [form, setForm]           = useState(INITIAL_FORM)
   const [mediaFiles, setMediaFiles] = useState([])
   const [errors, setErrors]       = useState({})
+  const [mediaRecovery, setMediaRecovery] = useState(null)
+  const [isRetryingMedia, setIsRetryingMedia] = useState(false)
   const customFields = useResource('custom-fields', { module: 'property' })
 
   const { mutate: createProperty, isPending } = useCreateProperty({
-    onSuccess: () => navigate('/properties'),
+    onSuccess: (property) => {
+      if (property.media_upload_failures?.length) {
+        setMediaRecovery({ property, failures: property.media_upload_failures })
+      } else {
+        navigate(`/properties/${property.id}`)
+      }
+    },
   })
+
+  async function retryMedia() {
+    setIsRetryingMedia(true)
+    try {
+      const result = await retryPropertyMediaFailures(mediaRecovery.property.id, mediaRecovery.failures)
+      if (result.failures.length) {
+        setMediaRecovery((current) => ({ ...current, failures: result.failures }))
+      } else {
+        navigate(`/properties/${mediaRecovery.property.id}`)
+      }
+    } finally {
+      setIsRetryingMedia(false)
+    }
+  }
 
   function onChange(field, value) {
     setForm((f) => ({ ...f, [field]: value }))
@@ -66,6 +89,36 @@ export default function AddPropertyPage() {
   }
 
   const stepProps = { form, errors, onChange, customFields: customFields.data || [] }
+
+  if (mediaRecovery) return (
+    <div className="mx-auto max-w-2xl space-y-5 py-8">
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="mt-0.5 shrink-0 text-amber-700" size={22} />
+          <div>
+            <h2 className="text-xl font-bold text-[#263238]">Property saved; some media needs attention</h2>
+            <p className="mt-2 text-sm leading-6 text-[#637079]">The listing is safe and was not duplicated. Retry the failed files now, or open its media library and repair them later.</p>
+          </div>
+        </div>
+      </div>
+      <div className="rounded-2xl border border-[#DDE5E3] bg-white p-6 shadow-sm">
+        <h3 className="font-semibold text-[#263238]">Failed uploads ({mediaRecovery.failures.length})</h3>
+        <ul className="mt-3 space-y-2">
+          {mediaRecovery.failures.map((failure) => (
+            <li key={`${failure.file.name}-${failure.index}`} className="rounded-lg bg-[#F8FAFA] p-3 text-sm">
+              <p className="font-medium text-[#263238]">{failure.file.name}</p>
+              <p className="mt-1 text-xs text-red-600">{failure.message}</p>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <Button leftIcon={<RefreshCw size={15} />} onClick={retryMedia} loading={isRetryingMedia}>Retry failed uploads</Button>
+          <Button variant="outlined" onClick={() => navigate(`/properties/${mediaRecovery.property.id}`)} disabled={isRetryingMedia}>Open media library</Button>
+          <Button variant="ghost" onClick={() => navigate('/properties')} disabled={isRetryingMedia}>Finish without media</Button>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-16">

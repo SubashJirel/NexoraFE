@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Bath, Bed, CalendarDays, Check, Flag, Heart, MapPin, Maximize2, Phone, UserRound } from 'lucide-react'
-import { Link, useOutletContext, useParams } from 'react-router-dom'
+import { Bath, Bed, CalendarDays, Check, Flag, MapPin, Maximize2, Phone, UserRound } from 'lucide-react'
+import { useOutletContext, useParams } from 'react-router-dom'
 import {
   usePublicInquiry,
   usePublicProperty,
@@ -8,7 +8,7 @@ import {
   usePublicSiteVisitRequest,
   useSimilarProperties,
 } from '@/hooks/usePublicAgency'
-import { getCustomerSession, getSavedProperties, reportPublicListing, toggleSavedProperty, trackPublicPropertyEvent } from '@/services/publicService'
+import { reportPublicListing, trackPublicPropertyEvent } from '@/services/publicService'
 import { PublicPropertyCard, formatPrice } from './PublicAgencyPage'
 import Avatar from '@/components/ui/Avatar'
 import Input from '@/components/ui/Input'
@@ -24,7 +24,6 @@ export default function PublicPropertyPage() {
   const query = shareSlug ? slugQuery : idQuery
   const resolvedId = query.data?.id || propertyId
   const similarQuery = useSimilarProperties(agency.license_number, resolvedId)
-  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     if (!resolvedId) return
@@ -43,11 +42,6 @@ export default function PublicPropertyPage() {
     meta.content = query.data.seo_description || query.data.short_description || agency.seo_description || ''
   }, [agency.name, agency.seo_description, query.data])
 
-  useEffect(() => {
-    if (!getCustomerSession(agency.slug)) return
-    getSavedProperties(agency.slug).then((items) => setSaved(items.some((item) => String(item.property) === String(resolvedId)))).catch(() => {})
-  }, [agency.slug, resolvedId])
-
   if (query.isLoading) return <div className="py-24"><PageSpinner /></div>
   if (query.isError) return <div className="mx-auto max-w-4xl px-4 py-24 text-center"><h1 className="text-2xl font-bold">Property unavailable</h1></div>
   const property = query.data
@@ -62,7 +56,7 @@ export default function PublicPropertyPage() {
 
       <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
         <div className="space-y-8">
-          <div><div className="flex items-start justify-between gap-4"><div><p className="text-sm font-semibold uppercase tracking-wider text-[var(--agency-color)]">{property.display_property_id} · For {property.purpose}</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">{property.title}</h1></div>{getCustomerSession(agency.slug) ? <button aria-label="Save property" onClick={async () => { await toggleSavedProperty(agency.slug, property.id); setSaved((value) => !value) }} className={`rounded-full border p-3 ${saved ? 'border-red-200 bg-red-50 text-red-500' : 'border-[#DDE5E3] text-[#637079]'}`}><Heart size={20} fill={saved ? 'currentColor' : 'none'} /></button> : <Link to={`/agency/${agency.slug}/portal`} className="rounded-lg border border-[#DDE5E3] px-3 py-2 text-xs font-semibold">Sign in to save</Link>}</div><p className="mt-3 flex items-center gap-2 text-[#637079]"><MapPin size={16} />{property.location_display}</p><p className="mt-5 text-3xl font-black text-[var(--agency-color)]">{formatPrice(property.price, property.currency)}</p></div>
+          <div><div><p className="text-sm font-semibold uppercase tracking-wider text-[var(--agency-color)]">{property.display_property_id} · For {property.purpose}</p><h1 className="mt-2 text-3xl font-black sm:text-4xl">{property.title}</h1></div><p className="mt-3 flex items-center gap-2 text-[#637079]"><MapPin size={16} />{property.location_display}</p><p className="mt-5 text-3xl font-black text-[var(--agency-color)]">{formatPrice(property.price, property.currency)}</p></div>
           <div className="grid grid-cols-2 gap-3 rounded-2xl border border-[#DDE5E3] bg-white p-5 sm:grid-cols-4"><Spec icon={Bed} label="Bedrooms" value={property.bedrooms ?? '—'} /><Spec icon={Bath} label="Bathrooms" value={property.bathrooms ?? '—'} /><Spec icon={Maximize2} label="Built-up area" value={property.built_up_area_value ? `${property.built_up_area_value} ${property.built_up_area_unit}` : '—'} /><Spec icon={Phone} label="Road access" value={property.road_access_value ? `${property.road_access_value} ${property.road_access_unit}` : '—'} /></div>
           {property.verification_summary?.level !== 'unverified' && <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800"><Check size={14} />{property.verification_summary.label} · {property.verification_summary.approved_documents}/{property.verification_summary.total_documents} documents resolved</div>}
           {property.availability_verified_at && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3"><p className="text-sm font-semibold text-emerald-900"><CalendarDays size={15} className="mr-2 inline" />Recently confirmed by {agency.name} on {new Date(property.availability_verified_at).toLocaleDateString()}</p><ReportListing agency={agency} property={property} /></div>}
