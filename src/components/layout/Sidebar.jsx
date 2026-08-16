@@ -32,6 +32,7 @@ import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import Avatar from '@/components/ui/Avatar'
 import { useLocalization } from '@/context/useLocalization'
+import { logout } from '@/services/authService'
 
 const NAV_ITEMS = [
   {
@@ -73,6 +74,7 @@ const NAV_ITEMS = [
     group: 'Marketing',
     items: [
       { label: 'Social Media', to: '/social-media', icon: Share2 },
+      { label: 'Website Creator', to: '/onboarding/website', icon: Globe2, roles: ['agency_owner', 'agency_manager', 'super_admin'] },
       { label: 'Website Content', to: '/website-content', icon: Globe2, roles: ['agency_owner', 'agency_manager', 'super_admin'] },
       { label: 'Web Submissions', to: '/website-submissions', icon: MessageCircle },
       { label: 'Agent Reviews', to: '/agent-reviews', icon: Star, roles: ['agency_owner', 'agency_manager', 'super_admin'] },
@@ -105,7 +107,7 @@ export default function Sidebar() {
     setSidebarOpen,
     toggleSidebarCollapse,
   } = useUIStore()
-  const { user, clearAuth } = useAuthStore()
+  const { user, refreshToken, clearAuth } = useAuthStore()
   const { t } = useLocalization()
 
   const closeMobileSidebar = () => setSidebarOpen(false)
@@ -175,9 +177,13 @@ export default function Sidebar() {
         <div className="shrink-0 space-y-1 border-t border-white/10 p-3">
           <button
             type="button"
-            onClick={() => {
-              clearAuth()
-              closeMobileSidebar()
+            onClick={async () => {
+              try {
+                if (refreshToken) await logout(refreshToken)
+              } finally {
+                clearAuth()
+                closeMobileSidebar()
+              }
             }}
             className={cn(
               'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-white/60 transition-colors hover:bg-white/10 hover:text-white',

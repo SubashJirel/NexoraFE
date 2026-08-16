@@ -17,6 +17,8 @@ const ForgotPasswordPage= lazy(() => import('@/pages/auth/ForgotPasswordPage'))
 const VerifyLoginOTPPage= lazy(() => import('@/pages/auth/VerifyLoginOTPPage'))
 const ResetPasswordPage = lazy(() => import('@/pages/auth/ResetPasswordPage'))
 const PaymentRequiredPage = lazy(() => import('@/pages/auth/PaymentRequiredPage'))
+const WebsiteOnboardingPage = lazy(() => import('@/pages/website/WebsiteOnboardingPage'))
+const WebsiteContentPage = lazy(() => import('@/pages/website/WebsiteContentPage'))
 
 // App
 const DashboardPage     = lazy(() => import('@/pages/dashboard/DashboardPage'))
@@ -60,10 +62,6 @@ export const router = createBrowserRouter([
       {
         path: 'map',
         lazy: () => import('@/pages/public/PublicMapPage').then((m) => ({ Component: m.default })),
-      },
-      {
-        path: 'portal',
-        lazy: () => import('@/pages/public/CustomerPortalPage').then((m) => ({ Component: m.default })),
       },
     ],
   },
@@ -172,7 +170,7 @@ export const router = createBrowserRouter([
       { path: 'compare', handle: { title: 'Compare Properties' }, lazy: () => import('@/pages/compare/ComparePage').then((m) => ({ Component: m.default })) },
       { path: 'notifications', handle: { title: 'Notifications' }, lazy: () => import('@/pages/notifications/NotificationsPage').then((m) => ({ Component: m.default })) },
       { path: 'team', handle: { title: 'Team & Invitations' }, lazy: () => import('@/pages/team/TeamPage').then((m) => ({ Component: m.default })) },
-      { path: 'customization', handle: { title: 'Customization' }, lazy: () => import('@/pages/customization/CustomizationPage').then((m) => ({ Component: m.default })) },
+      { path: 'customization', handle: { title: 'Customization' }, element: <RequireAuth roles={['agency_owner', 'agency_manager']}>{S(lazy(() => import('@/pages/customization/CustomizationPage')))}</RequireAuth> },
       { path: 'audit-log', handle: { title: 'Audit Log' }, lazy: () => import('@/pages/audit/AuditLogPage').then((m) => ({ Component: m.default })) },
       { path: 'billing', handle: { title: 'Billing' }, lazy: () => import('@/pages/billing/BillingPage').then((m) => ({ Component: m.default })) },
       { path: 'platform-admin', handle: { title: 'Platform Admin' }, lazy: () => import('@/pages/admin/AdminPage').then((m) => ({ Component: m.default })) },
@@ -194,7 +192,8 @@ export const router = createBrowserRouter([
         handle: { title: 'Social Media' },
         lazy: () => import('@/pages/social-media/SocialMediaPage').then((m) => ({ Component: m.default })),
       },
-      { path: 'website-content', handle: { title: 'Website Content' }, lazy: () => import('@/pages/website/WebsiteContentPage').then((m) => ({ Component: m.default })) },
+      { path: 'website-content', handle: { title: 'Website Content' }, element: <RequireAuth roles={['agency_owner', 'agency_manager']}>{S(WebsiteContentPage)}</RequireAuth> },
+      { path: 'onboarding/website', handle: { title: 'Website Creator' }, element: <RequireAuth roles={['agency_owner', 'agency_manager']}>{S(WebsiteOnboardingPage)}</RequireAuth> },
       { path: 'website-submissions', handle: { title: 'Website Submissions' }, lazy: () => import('@/pages/website/WebsiteSubmissionsPage').then((m) => ({ Component: m.default })) },
       { path: 'agent-reviews', handle: { title: 'Agent Reviews' }, lazy: () => import('@/pages/website/AgentReviewsPage').then((m) => ({ Component: m.default })) },
       // ── Settings ───────────────────────────────────────────

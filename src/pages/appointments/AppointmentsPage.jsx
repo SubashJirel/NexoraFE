@@ -9,7 +9,7 @@ export default function AppointmentsPage() {
   const fields = [
     { name: 'full_name', label: 'Customer name', required: true }, { name: 'email', label: 'Email', type: 'email', required: true },
     { name: 'phone', label: 'Phone' }, { name: 'status', label: 'Status', type: 'select', options: ['requested', 'confirmed', 'completed', 'cancelled'], defaultValue: 'requested' },
-    { name: 'agent', label: 'Agent', type: 'select', options: opts(agents.data, 'full_name') }, { name: 'property', label: 'Property', type: 'select', options: opts(properties.data, 'title') },
+    { name: 'agent', label: 'Agent', type: 'select', options: opts(agents.data, 'full_name'), required: true }, { name: 'property', label: 'Property', type: 'select', options: opts(properties.data, 'title') },
     { name: 'starts_at', label: 'Starts', type: 'datetime-local', required: true }, { name: 'ends_at', label: 'Ends', type: 'datetime-local', required: true },
     { name: 'notes', label: 'Notes', type: 'textarea', full: true },
   ]

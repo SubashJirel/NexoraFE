@@ -89,65 +89,6 @@ export async function reportPublicListing(agencySlug, propertyId, payload) {
   return data
 }
 
-export async function registerCustomer(slug, payload) {
-  const { data } = await apiClient.post(`/public/agencies/${slug}/customers/`, payload)
-  saveCustomerSession(slug, data)
-  return data
-}
-
-export async function loginCustomer(slug, payload) {
-  const { data } = await apiClient.post(`/public/agencies/${slug}/customers/login/`, payload)
-  saveCustomerSession(slug, data)
-  return data
-}
-
-export function getCustomerSession(slug) {
-  try { return JSON.parse(localStorage.getItem(`nexora_customer_${slug}`)) } catch { return null }
-}
-
-export function saveCustomerSession(slug, data) {
-  localStorage.setItem(`nexora_customer_${slug}`, JSON.stringify(data))
-}
-
-export function clearCustomerSession(slug) {
-  localStorage.removeItem(`nexora_customer_${slug}`)
-}
-
-function customerConfig(slug) {
-  const token = getCustomerSession(slug)?.access_token
-  return { headers: { 'X-Customer-Token': token || '' } }
-}
-
-export async function getSavedProperties(slug) {
-  const { data } = await apiClient.get(`/public/agencies/${slug}/customer/saved-properties/`, customerConfig(slug))
-  return data
-}
-
-export async function toggleSavedProperty(slug, property) {
-  const { data } = await apiClient.post(`/public/agencies/${slug}/customer/saved-properties/`, { property }, customerConfig(slug))
-  return data
-}
-
-export async function getSavedSearches(slug) {
-  const { data } = await apiClient.get(`/public/agencies/${slug}/customer/saved-searches/`, customerConfig(slug))
-  return data
-}
-
-export async function createSavedSearch(slug, payload) {
-  const { data } = await apiClient.post(`/public/agencies/${slug}/customer/saved-searches/`, payload, customerConfig(slug))
-  return data
-}
-
-export async function getPublicAvailability(slug) {
-  const { data } = await apiClient.get(`/public/agencies/${slug}/appointments/`)
-  return data
-}
-
-export async function createPublicAppointment(slug, payload) {
-  const { data } = await apiClient.post(`/public/agencies/${slug}/appointments/`, payload, customerConfig(slug))
-  return data
-}
-
 function getVisitorId() {
   const key = 'nexora_visitor_id'
   let value = localStorage.getItem(key)

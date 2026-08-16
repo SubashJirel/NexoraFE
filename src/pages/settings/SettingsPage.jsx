@@ -58,26 +58,12 @@ function AgencySettingsForm({ agency }) {
     timezone: agency.timezone || 'Asia/Kathmandu',
     message_templates: JSON.parse(JSON.stringify(agency.resolved_message_templates || agency.message_templates || {})),
     is_website_published: agency.is_website_published ?? true,
-    website_config: {
-      hero_eyebrow: agency.website_config?.hero_eyebrow || '',
-      hero_title: agency.website_config?.hero_title || '',
-      hero_subtitle: agency.website_config?.hero_subtitle || '',
-      mission: agency.website_config?.mission || '',
-      story: agency.website_config?.story || '',
-      statistics: agency.website_config?.statistics || [],
-      testimonials: agency.website_config?.testimonials || [],
-      faqs: agency.website_config?.faqs || [],
-    },
     logo: null,
     cover_image: null,
   }))
 
   function set(field, value) {
     setForm((current) => ({ ...current, [field]: value }))
-  }
-
-  function setWebsite(field, value) {
-    setForm((current) => ({ ...current, website_config: { ...current.website_config, [field]: value } }))
   }
 
   function setMessage(template, field, value) {
@@ -171,15 +157,10 @@ function AgencySettingsForm({ agency }) {
           <SettingsCard icon={Globe2} title={t('Public website')} description="Publish and customize the SEO storefront rendered by the selected template.">
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="text-sm font-medium text-[#263238]">Template<select value={form.website_template} onChange={(e) => set('website_template', e.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#DDE5E3] px-3"><option value="luxury-agency">Luxury agency</option></select></label>
-              <label className="flex items-center gap-2 self-end rounded-lg border border-[#DDE5E3] px-3 py-2 text-sm"><input type="checkbox" checked={form.is_website_published} onChange={(e) => set('is_website_published', e.target.checked)} />Website published</label>
+              <div className="self-end rounded-lg border border-[#DDE5E3] px-3 py-2 text-sm text-[#637079]">Publishing is managed in <a href="/onboarding/website" className="font-semibold text-[#496B5A] hover:underline">Website Creator</a>.</div>
               <Input label="Custom domain" value={form.custom_domain} onChange={(e) => set('custom_domain', e.target.value)} placeholder="homes.example.com" />
               <Input label="SEO title" value={form.seo_title} onChange={(e) => set('seo_title', e.target.value)} maxLength={70} />
               <div className="sm:col-span-2"><Textarea label="SEO description" rows={3} value={form.seo_description} onChange={(e) => set('seo_description', e.target.value)} maxLength={180} /></div>
-              <Input label="Hero eyebrow" value={form.website_config.hero_eyebrow} onChange={(e) => setWebsite('hero_eyebrow', e.target.value)} />
-              <Input label="Hero title" value={form.website_config.hero_title} onChange={(e) => setWebsite('hero_title', e.target.value)} />
-              <div className="sm:col-span-2"><Textarea label="Hero subtitle" rows={3} value={form.website_config.hero_subtitle} onChange={(e) => setWebsite('hero_subtitle', e.target.value)} /></div>
-              <div className="sm:col-span-2"><Textarea label="Mission" rows={4} value={form.website_config.mission} onChange={(e) => setWebsite('mission', e.target.value)} /></div>
-              <div className="sm:col-span-2"><Textarea label="Story" rows={4} value={form.website_config.story} onChange={(e) => setWebsite('story', e.target.value)} /></div>
             </div>
           </SettingsCard>
 

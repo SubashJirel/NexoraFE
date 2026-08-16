@@ -24,7 +24,6 @@ export default function PublicAgencyLayout() {
           <nav className="ml-auto flex items-center gap-4 text-sm font-medium">
             <Link to={`/agency/${agency.slug}`} className="hover:text-[var(--agency-color)]">Properties</Link>
             <Link to={`/agency/${agency.slug}/map`} className="hidden hover:text-[var(--agency-color)] sm:block">Map</Link>
-            <Link to={`/agency/${agency.slug}/portal`} className="hidden hover:text-[var(--agency-color)] sm:block">Saved</Link>
             <a href="#agents" className="hidden hover:text-[var(--agency-color)] sm:block">Agents</a>
             <a href="#contact" className="rounded-lg bg-[var(--agency-color)] px-4 py-2 text-white">Contact</a>
           </nav>
