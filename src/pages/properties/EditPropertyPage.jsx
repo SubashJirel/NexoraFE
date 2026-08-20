@@ -33,6 +33,7 @@ export default function EditPropertyPage() {
 
   const [step, setStep] = useState(1)
   const [formState, setForm] = useState(null)
+  const [mediaFiles, setMediaFiles] = useState([])
   const [errors, setErrors] = useState({})
   const form = property ? (formState ?? propertyToForm(property)) : INITIAL_FORM
 
@@ -70,7 +71,7 @@ export default function EditPropertyPage() {
       return
     }
 
-    updateProperty({ propertyPayload: buildPropertyPayload(form) })
+    updateProperty({ propertyPayload: buildPropertyPayload(form), mediaFiles })
   }
 
   const stepProps = { form, errors, onChange, customFields: customFields.data || [] }
@@ -170,11 +171,11 @@ export default function EditPropertyPage() {
               {step === 3 && <Step3Details {...stepProps} />}
               {step === 4 && (
                 <Step4Media
-                  files={[]}
-                  onChange={() => {}}
+                  files={mediaFiles}
+                  onChange={setMediaFiles}
+                  existingMedia={property.media || []}
                   form={form}
                   onFormChange={onChange}
-                  allowMediaUpload={false}
                 />
               )}
               {step === 5 && <Step5Description {...stepProps} />}

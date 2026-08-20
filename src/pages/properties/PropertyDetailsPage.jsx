@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Bath, Bed, Building2, CalendarDays, CheckCircle2, Clock3, Eye, Home, Layers, MapPin, Maximize2, Pencil, PhoneCall, Share2, SquareAsterisk, Star, Tag, Trash2, Trash, X } from 'lucide-react'
+import { ArrowLeft, Bath, Bed, Building2, CalendarDays, CheckCircle2, Clock3, Eye, Film, Home, Layers, MapPin, Maximize2, Pencil, PhoneCall, Share2, SquareAsterisk, Star, Tag, Trash2, Trash, X } from 'lucide-react'
 import { useProperty } from '@/hooks/useProperties'
 import { useDeletePropertyMedia } from '@/hooks/useDeletePropertyMedia'
 import { useDeleteProperty } from '@/hooks/useDeleteProperty'
@@ -46,7 +46,8 @@ export default function PropertyDetailsPage() {
 
   const primaryMedia = useMemo(() => {
     if (!property?.media?.length) return null
-    return property.media.find((media) => media.is_primary) || property.media[0]
+    const images = property.media.filter((media) => media.media_type === 'image')
+    return images.find((media) => media.is_primary) || images[0] || null
   }, [property])
 
   if (isLoading) return <PageSpinner />
@@ -65,7 +66,7 @@ export default function PropertyDetailsPage() {
 
   const status = STATUS_CONFIG[property.status] || { label: property.status || 'Unknown', variant: 'neutral' }
   const purpose = PURPOSE_CONFIG[property.purpose] || property.purpose || 'Unknown'
-  const imageUrl = primaryMedia?.file || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1200&q=80'
+  const imageUrl = primaryMedia?.large_image || primaryMedia?.file || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1200&q=80'
 
   function handleDeleteMedia(mediaId) {
     const confirmed = window.confirm('Delete this media item? This cannot be undone.')
@@ -243,21 +244,45 @@ export default function PropertyDetailsPage() {
           </section>
 
           <section className="rounded-2xl border border-[#DDE5E3] bg-white p-5 sm:p-6 space-y-4">
-            <div className="flex items-center justify-between gap-3"><SectionTitle icon={<Clock3 size={16} />} title="Media" /><label className="cursor-pointer rounded-lg bg-[#eef3f0] px-3 py-2 text-xs font-semibold text-[#496B5A]">{uploadMedia.isPending ? 'Uploading...' : 'Upload media'}<input type="file" accept="image/*,video/mp4,application/pdf" className="hidden" disabled={uploadMedia.isPending} onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadMedia.mutate(file); event.target.value = '' }} /></label></div>
+            <div className="flex items-center justify-between gap-3">
+              <SectionTitle icon={<Clock3 size={16} />} title="Media" />
+              <label className="cursor-pointer rounded-lg bg-[#eef3f0] px-3 py-2 text-xs font-semibold text-[#496B5A]">
+                {uploadMedia.isPending ? 'Uploading...' : 'Upload images or videos'}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,video/mp4"
+                  multiple
+                  className="hidden"
+                  disabled={uploadMedia.isPending}
+                  onChange={(event) => {
+                    const files = Array.from(event.target.files ?? [])
+                    if (files.length) uploadMedia.mutate(files)
+                    event.target.value = ''
+                  }}
+                />
+              </label>
+            </div>
             {property.media?.length ? (
               <div className="grid grid-cols-2 gap-3">
                 {property.media.map((mediaItem, index) => (
                   <div key={mediaItem.id || index} className="group relative overflow-hidden rounded-xl border border-[#DDE5E3] bg-[#F8FAFA]">
-                    <img src={mediaItem.file} alt={mediaItem.title || `${property.title} media ${index + 1}`} className="h-28 w-full object-cover" />
+                    {mediaItem.media_type === 'video' || mediaItem.media_type === 'reel' ? (
+                      <video src={mediaItem.file || mediaItem.external_url} controls playsInline preload="metadata" className="h-28 w-full object-cover" />
+                    ) : (
+                      <img src={mediaItem.card_image || mediaItem.thumbnail || mediaItem.file} alt={mediaItem.alt_text || mediaItem.title || `${property.title} media ${index + 1}`} width={mediaItem.card_width || 320} height={mediaItem.card_height || 180} loading="lazy" className="h-28 w-full object-cover" />
+                    )}
+                    {(mediaItem.media_type === 'video' || mediaItem.media_type === 'reel') && (
+                      <span className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/65 px-2 py-0.5 text-[9px] font-bold text-white"><Film size={10} /> Video</span>
+                    )}
                     {mediaItem.is_primary && <span className="absolute left-2 top-2 rounded-full bg-amber-400 px-2 py-0.5 text-[9px] font-bold">Primary</span>}
-                    <div className="absolute inset-0 flex items-start justify-end gap-1 bg-black/20 p-2 opacity-0 transition-opacity group-hover:opacity-100">
-                      {!mediaItem.is_primary && <Button type="button" variant="secondary" size="icon" className="h-8 w-8" onClick={() => updateMedia.mutate({ mediaId: mediaItem.id, payload: { is_primary: true } })} aria-label="Set primary"><Star size={13} /></Button>}
-                      <Button type="button" variant="outlined" size="icon" className="h-8 w-8 bg-white" onClick={() => setEditingMedia(mediaItem)} aria-label="Edit media"><Pencil size={13} /></Button>
+                    <div className="pointer-events-none absolute inset-0 flex items-start justify-end gap-1 bg-black/20 p-2 opacity-0 transition-opacity group-hover:opacity-100">
+                      {mediaItem.media_type === 'image' && !mediaItem.is_primary && <Button type="button" variant="secondary" size="icon" className="pointer-events-auto h-8 w-8" onClick={() => updateMedia.mutate({ mediaId: mediaItem.id, payload: { is_primary: true } })} aria-label="Set primary"><Star size={13} /></Button>}
+                      <Button type="button" variant="outlined" size="icon" className="pointer-events-auto h-8 w-8 bg-white" onClick={() => setEditingMedia(mediaItem)} aria-label="Edit media"><Pencil size={13} /></Button>
                       <Button
                         type="button"
                         variant="danger"
                         size="icon"
-                        className="h-8 w-8 shadow-md"
+                        className="pointer-events-auto h-8 w-8 shadow-md"
                         onClick={() => handleDeleteMedia(mediaItem.id)}
                         disabled={isDeletingMedia}
                         aria-label="Delete media"
@@ -280,8 +305,8 @@ export default function PropertyDetailsPage() {
 }
 
 function MediaEditDialog({ media, onClose, onSave, isSaving }) {
-  const [form, setForm] = useState({ title: media.title || '', caption: media.caption || '', sort_order: media.sort_order ?? 0, is_primary: Boolean(media.is_primary) })
-  return <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/40 p-4" onClick={onClose}><form onSubmit={(event) => { event.preventDefault(); onSave({ ...form, sort_order: Number(form.sort_order) }) }} onClick={(event) => event.stopPropagation()} className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-2xl"><div className="flex items-center justify-between"><div><h3 className="font-semibold text-[#263238]">Edit media</h3><p className="text-xs text-[#637079]">Update display order and descriptive metadata.</p></div><button type="button" onClick={onClose}><X size={17} /></button></div><label className="block text-sm font-medium text-[#263238]">Title<input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} className="mt-1.5 h-10 w-full rounded-lg border border-[#DDE5E3] px-3 text-sm outline-none focus:border-[#496B5A]" /></label><label className="block text-sm font-medium text-[#263238]">Caption<textarea value={form.caption} onChange={(event) => setForm((current) => ({ ...current, caption: event.target.value }))} rows="3" className="mt-1.5 w-full rounded-lg border border-[#DDE5E3] px-3 py-2 text-sm outline-none focus:border-[#496B5A]" /></label><label className="block text-sm font-medium text-[#263238]">Sort order<input type="number" value={form.sort_order} onChange={(event) => setForm((current) => ({ ...current, sort_order: event.target.value }))} className="mt-1.5 h-10 w-full rounded-lg border border-[#DDE5E3] px-3 text-sm" /></label><label className="flex items-center gap-2 text-sm text-[#263238]"><input type="checkbox" checked={form.is_primary} onChange={(event) => setForm((current) => ({ ...current, is_primary: event.target.checked }))} />Use as primary image</label><div className="flex justify-end gap-2"><Button type="button" variant="outlined" onClick={onClose}>Cancel</Button><Button type="submit" loading={isSaving}>Save media</Button></div></form></div>
+  const [form, setForm] = useState({ title: media.title || '', caption: media.caption || '', alt_text: media.alt_text || '', sort_order: media.sort_order ?? 0, is_primary: Boolean(media.is_primary), is_public: media.is_public !== false })
+  return <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/40 p-4" onClick={onClose}><form onSubmit={(event) => { event.preventDefault(); onSave({ ...form, sort_order: Number(form.sort_order) }) }} onClick={(event) => event.stopPropagation()} className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-2xl"><div className="flex items-center justify-between"><div><h3 className="font-semibold text-[#263238]">Edit media</h3><p className="text-xs text-[#637079]">Update display order, visibility, and descriptive metadata.</p></div><button type="button" onClick={onClose}><X size={17} /></button></div><label className="block text-sm font-medium text-[#263238]">Title<input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} className="mt-1.5 h-10 w-full rounded-lg border border-[#DDE5E3] px-3 text-sm outline-none focus:border-[#496B5A]" /></label><label className="block text-sm font-medium text-[#263238]">Alt text<input value={form.alt_text} onChange={(event) => setForm((current) => ({ ...current, alt_text: event.target.value }))} placeholder="Describe this image for visitors using assistive technology" className="mt-1.5 h-10 w-full rounded-lg border border-[#DDE5E3] px-3 text-sm outline-none focus:border-[#496B5A]" /></label><label className="block text-sm font-medium text-[#263238]">Caption<textarea value={form.caption} onChange={(event) => setForm((current) => ({ ...current, caption: event.target.value }))} rows="3" className="mt-1.5 w-full rounded-lg border border-[#DDE5E3] px-3 py-2 text-sm outline-none focus:border-[#496B5A]" /></label><label className="block text-sm font-medium text-[#263238]">Sort order<input type="number" value={form.sort_order} onChange={(event) => setForm((current) => ({ ...current, sort_order: event.target.value }))} className="mt-1.5 h-10 w-full rounded-lg border border-[#DDE5E3] px-3 text-sm" /></label><label className="flex items-center gap-2 text-sm text-[#263238]"><input type="checkbox" checked={form.is_public} onChange={(event) => setForm((current) => ({ ...current, is_public: event.target.checked }))} />Show on the public property page</label><label className="flex items-center gap-2 text-sm text-[#263238]"><input type="checkbox" checked={form.is_primary} onChange={(event) => setForm((current) => ({ ...current, is_primary: event.target.checked }))} />Use as primary image</label><div className="flex justify-end gap-2"><Button type="button" variant="outlined" onClick={onClose}>Cancel</Button><Button type="submit" loading={isSaving}>Save media</Button></div></form></div>
 }
 
 function SectionTitle({ icon, title }) {

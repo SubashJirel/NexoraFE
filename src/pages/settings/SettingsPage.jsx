@@ -27,6 +27,7 @@ function AgencySettingsForm({ agency }) {
   const mutation = useUpdateAgency()
   const localization = useLocalization()
   const { t } = localization
+  const websiteUrl = agency.website_url || `http://localhost:5173/?tenant=${encodeURIComponent(agency.slug)}`
   const [form, setForm] = useState(() => ({
     name: agency.name || '',
     about: agency.about || '',
@@ -93,7 +94,7 @@ function AgencySettingsForm({ agency }) {
           <p className="mt-1 text-sm text-[#637079]">Manage your public identity, contact information, and subscription.</p>
         </div>
         <div className="flex gap-2">
-          <a href={`${import.meta.env.VITE_STOREFRONT_URL || 'http://localhost:3000'}/agency/${agency.slug}`} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg border border-[#496B5A] px-4 text-sm font-semibold text-[#496B5A] hover:bg-[#eef3f0]">Preview public site</a>
+          <a href={websiteUrl} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center justify-center rounded-lg border border-[#496B5A] px-4 text-sm font-semibold text-[#496B5A] hover:bg-[#eef3f0]">Open live website</a>
           <Button type="submit" loading={mutation.isPending}>{t('Save changes')}</Button>
         </div>
       </div>

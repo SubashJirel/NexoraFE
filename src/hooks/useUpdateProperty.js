@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { updateProperty } from '@/services/propertyService'
+import { updatePropertyWithMedia } from '@/services/propertyService'
 import { PROPERTIES_KEY, PROPERTY_KEY } from '@/hooks/useProperties'
 import toast from 'react-hot-toast'
 
@@ -7,7 +7,9 @@ export function useUpdateProperty(propertyId, { onSuccess } = {}) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ propertyPayload }) => updateProperty(propertyId, propertyPayload),
+    mutationFn: ({ propertyPayload, mediaFiles = [] }) => (
+      updatePropertyWithMedia(propertyId, propertyPayload, mediaFiles)
+    ),
 
     onSuccess: (updatedProperty) => {
       queryClient.setQueryData(PROPERTIES_KEY, (old = []) =>
@@ -16,7 +18,13 @@ export function useUpdateProperty(propertyId, { onSuccess } = {}) {
       queryClient.setQueryData(PROPERTY_KEY(propertyId), updatedProperty)
       queryClient.invalidateQueries({ queryKey: PROPERTIES_KEY })
       queryClient.invalidateQueries({ queryKey: PROPERTY_KEY(propertyId) })
-      toast.success('Property updated successfully!')
+      if (updatedProperty.media_upload_failures?.length) {
+        toast.error(
+          `Property updated, but ${updatedProperty.media_upload_failures.length} media file${updatedProperty.media_upload_failures.length === 1 ? '' : 's'} failed to upload.`
+        )
+      } else {
+        toast.success('Property and media updated successfully!')
+      }
       onSuccess?.(updatedProperty)
     },
 

@@ -104,6 +104,11 @@ export default function Step2Location({ form, errors, onChange }) {
         />
       </div>
 
+      <label className="flex items-start gap-3 rounded-xl border border-[#DDE5E3] bg-[#F8FAFA] p-4 text-sm text-[#263238]">
+        <input type="checkbox" className="mt-0.5" checked={form.show_exact_location_publicly !== false} onChange={(e) => onChange('show_exact_location_publicly', e.target.checked)} />
+        <span><strong className="block">Show exact location publicly</strong><small className="mt-1 block text-[#637079]">Turn this off to show only municipality, district, and province while keeping the precise address inside the CRM.</small></span>
+      </label>
+
       {/* Map placeholder */}
       <div
         className="rounded-xl border border-dashed border-[#DDE5E3] bg-[#F8FAFA] h-40 flex flex-col items-center justify-center gap-2 text-[#8b969d] cursor-pointer hover:border-[#B8C9C5] transition-colors"

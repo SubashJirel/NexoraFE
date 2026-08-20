@@ -21,7 +21,7 @@ export function useSocialPosts(params = {}) {
 
 /**
  * Create a new social post.
- * Sends multipart/form-data including an optional image file.
+ * Sends multipart/form-data including up to five ordered image files.
  */
 export function useCreateSocialPost({ onSuccess } = {}) {
   const queryClient = useQueryClient()
@@ -79,7 +79,7 @@ export function usePublishSocialPost({ onSuccess } = {}) {
  *
  * Usage:
  *   const { mutate, isPending } = useUpdateSocialPost()
- *   mutate({ id: 1, caption: 'new text', image: File })
+ *   mutate({ id: 1, caption: 'new text', images: [File], media_order: ['new:0'] })
  */
 export function useUpdateSocialPost({ onSuccess } = {}) {
   const queryClient = useQueryClient()

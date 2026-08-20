@@ -352,14 +352,23 @@ function PostCard({ post, onPublish, isPublishing, onEdit, onDelete }) {
   const statusLabel = post.status?.charAt(0).toUpperCase() + post.status?.slice(1)
   const canPublish = post.status === 'draft' || post.status === 'failed'
   const canEdit    = true
+  const mediaCount = Array.isArray(post.media) && post.media.length > 0
+    ? post.media.length
+    : post.image ? 1 : 0
+  const coverImage = post.media?.[0]?.image ?? post.image
 
   return (
     <Card padding="none" className="overflow-hidden">
       <div className="flex">
         {/* image thumbnail */}
-        {post.image ? (
-          <div className="shrink-0 w-20 h-auto sm:w-24">
-            <img src={post.image} alt="" className="w-full h-full object-cover" />
+        {coverImage ? (
+          <div className="relative shrink-0 w-20 h-auto sm:w-24">
+            <img src={coverImage} alt="" className="w-full h-full object-cover" />
+            {mediaCount > 1 && (
+              <span className="absolute bottom-1.5 right-1.5 rounded-full bg-black/65 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                1/{mediaCount}
+              </span>
+            )}
           </div>
         ) : (
           <div className="shrink-0 w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center bg-[#EEF2F2]">

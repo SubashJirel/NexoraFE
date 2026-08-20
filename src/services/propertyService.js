@@ -85,7 +85,7 @@ export async function deleteProperty(propertyId) {
  * a real file object, not a base64 string.
  *
  * @param {number|string} propertyId
- * @param {object} mediaPayload - { file: File, media_type, title, caption, sort_order, is_primary }
+ * @param {object} mediaPayload - { file: File, media_type, title, caption, alt_text, is_public, sort_order, is_primary }
  */
 export async function uploadPropertyMedia(propertyId, mediaPayload) {
   const form = new FormData()
@@ -93,8 +93,10 @@ export async function uploadPropertyMedia(propertyId, mediaPayload) {
   form.append('file',       mediaPayload.file)
   form.append('is_primary', String(mediaPayload.is_primary ?? false))
   form.append('sort_order', String(mediaPayload.sort_order ?? 0))
+  form.append('is_public', String(mediaPayload.is_public ?? true))
   if (mediaPayload.title)   form.append('title',   mediaPayload.title)
   if (mediaPayload.caption) form.append('caption', mediaPayload.caption)
+  if (mediaPayload.alt_text) form.append('alt_text', mediaPayload.alt_text)
 
   const { data } = await apiClient.post(
     `/properties/${propertyId}/media/`,
@@ -114,6 +116,31 @@ export async function uploadPropertyMedia(propertyId, mediaPayload) {
 export async function deletePropertyMedia(mediaId) {
   const { data } = await apiClient.delete(`/properties/media/${mediaId}/`)
   return data
+}
+
+export async function updatePropertyWithMedia(
+  propertyId,
+  propertyPayload,
+  mediaFiles = [],
+) {
+  const property = await updateProperty(propertyId, propertyPayload)
+  if (!mediaFiles.length) return property
+
+  const existingMedia = property.media || []
+  const hasPrimaryImage = existingMedia.some(
+    (item) => item.media_type === 'image' && item.is_primary
+  )
+  const sortOffset = existingMedia.reduce(
+    (maximum, item) => Math.max(maximum, Number(item.sort_order) || 0),
+    -1,
+  ) + 1
+  const mediaResult = await uploadPropertyMediaFiles(propertyId, mediaFiles, {
+    sortOffset,
+    makeFirstImagePrimary: !hasPrimaryImage,
+  })
+  property.media = [...existingMedia, ...mediaResult.uploaded]
+  property.media_upload_failures = mediaResult.failures
+  return property
 }
 
 export async function updatePropertyMedia(mediaId, payload) {
@@ -180,6 +207,37 @@ export async function updatePropertyDuplicate(flagId, status) {
   return data
 }
 
+export async function uploadPropertyMediaFiles(
+  propertyId,
+  mediaFiles = [],
+  { sortOffset = 0, makeFirstImagePrimary = false } = {},
+) {
+  const firstImageIndex = makeFirstImagePrimary
+    ? mediaFiles.findIndex((file) => file.type.startsWith('image/'))
+    : -1
+  const uploads = mediaFiles.map((file, index) => {
+    const isPrimary = index === firstImageIndex
+    const sortOrder = sortOffset + index
+    return uploadPropertyMedia(propertyId, {
+      file,
+      media_type: file.type.startsWith('video/') ? 'video' : 'image',
+      is_primary: isPrimary,
+      sort_order: sortOrder,
+      title: file.name.replace(/\.[^.]+$/, ''),
+    })
+  })
+  const results = await Promise.allSettled(uploads)
+  return {
+    uploaded: results.flatMap((result) => result.status === 'fulfilled' ? [result.value] : []),
+    failures: results.flatMap((result, index) => result.status === 'rejected' ? [{
+      file: mediaFiles[index],
+      index: sortOffset + index,
+      is_primary: index === firstImageIndex,
+      message: mediaUploadError(result.reason),
+    }] : []),
+  }
+}
+
 /**
  * Orchestrates both APIs as a single atomic action:
  *  1. POST /api/properties/          → get propertyId
@@ -196,25 +254,11 @@ export async function createPropertyWithMedia(propertyPayload, mediaFiles = []) 
   // Step 2 — upload all media in parallel (fire-and-forget style;
   //           if media fails we still have the property)
   if (mediaFiles.length > 0) {
-    const uploads = mediaFiles.map((file, index) =>
-      uploadPropertyMedia(property.id, {
-        file,
-        media_type: file.type.startsWith('video') ? 'video' : 'image',
-        is_primary: index === 0,   // first image is primary
-        sort_order: index,
-        title: file.name.replace(/\.[^.]+$/, ''),
-      })
-    )
-    const results = await Promise.allSettled(uploads)
-    // Attach successful uploads to the returned object
-    property.media = results
-      .filter((r) => r.status === 'fulfilled')
-      .map((r) => r.value)
-    property.media_upload_failures = results.flatMap((result, index) => result.status === 'rejected' ? [{
-      file: mediaFiles[index],
-      index,
-      message: mediaUploadError(result.reason),
-    }] : [])
+    const mediaResult = await uploadPropertyMediaFiles(property.id, mediaFiles, {
+      makeFirstImagePrimary: true,
+    })
+    property.media = mediaResult.uploaded
+    property.media_upload_failures = mediaResult.failures
   }
 
   return property
@@ -224,8 +268,8 @@ export async function retryPropertyMediaFailures(propertyId, failures = []) {
   const results = await Promise.allSettled(failures.map((failure) =>
     uploadPropertyMedia(propertyId, {
       file: failure.file,
-      media_type: failure.file.type.startsWith('video') ? 'video' : 'image',
-      is_primary: failure.index === 0,
+      media_type: failure.file.type.startsWith('video/') ? 'video' : 'image',
+      is_primary: Boolean(failure.is_primary),
       sort_order: failure.index,
       title: failure.file.name.replace(/\.[^.]+$/, ''),
     })
