@@ -1,15 +1,23 @@
-import { useRef, useState } from 'react'
-import { CloudUpload, X, Star } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronLeft, ChevronRight, CloudUpload, Film, Star, X } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import Input from '@/components/ui/Input'
 
-export default function Step4Media({ files, onChange, form, onFormChange, allowMediaUpload = true }) {
+export default function Step4Media({ files, onChange, form, onFormChange, allowMediaUpload = true, existingMedia = [] }) {
   const inputRef = useRef(null)
   const [dragging, setDragging] = useState(false)
+  const [mediaError, setMediaError] = useState('')
 
   function addFiles(incoming) {
-    const valid = Array.from(incoming).filter(
-      (f) => f.type.startsWith('image/') || f.type.startsWith('video/')
+    const selected = Array.from(incoming)
+    const valid = selected.filter((file) => (
+      ['image/jpeg', 'image/png', 'image/webp', 'video/mp4'].includes(file.type)
+      && file.size <= 15 * 1024 * 1024
+    ))
+    setMediaError(
+      valid.length === selected.length
+        ? ''
+        : 'Use JPEG, PNG, WebP, or MP4 files no larger than 15 MB each.'
     )
     onChange([...files, ...valid])
   }
@@ -18,11 +26,20 @@ export default function Step4Media({ files, onChange, form, onFormChange, allowM
     onChange(files.filter((_, i) => i !== index))
   }
 
-  // Moving picked file to index 0 makes it the primary
+  // Moving an image to index 0 makes it the property cover.
   function makePrimary(index) {
+    if (!files[index]?.type.startsWith('image/')) return
     const reordered = [...files]
     const [picked]  = reordered.splice(index, 1)
     onChange([picked, ...reordered])
+  }
+
+  function moveFile(fromIndex, toIndex) {
+    if (toIndex < 0 || toIndex >= files.length) return
+    const reordered = [...files]
+    const [picked] = reordered.splice(fromIndex, 1)
+    reordered.splice(toIndex, 0, picked)
+    onChange(reordered)
   }
 
   function handleDrop(e) {
@@ -56,7 +73,7 @@ export default function Step4Media({ files, onChange, form, onFormChange, allowM
               Click to upload or drag and drop
             </p>
             <p className="mt-1 text-xs text-[#8b969d]">
-              JPG, PNG, WEBP, MP4 — max 10 MB each
+              JPEG, PNG, WebP, or MP4 — max 15 MB each
             </p>
           </div>
           <button
@@ -69,10 +86,42 @@ export default function Step4Media({ files, onChange, form, onFormChange, allowM
             ref={inputRef}
             type="file"
             multiple
-            accept="image/*,video/*"
+            accept="image/jpeg,image/png,image/webp,video/mp4"
             className="hidden"
-            onChange={(e) => addFiles(e.target.files)}
+            onChange={(e) => { addFiles(e.target.files); e.target.value = '' }}
           />
+        </div>
+      )}
+
+      {mediaError && <p className="text-xs font-medium text-red-600">{mediaError}</p>}
+
+      {existingMedia.length > 0 && (
+        <div>
+          <p className="mb-2 text-xs font-medium text-[#637079]">
+            Existing property media ({existingMedia.length})
+          </p>
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+            {existingMedia.map((item) => (
+              <div key={item.id} className="relative aspect-square overflow-hidden rounded-xl border border-[#DDE5E3] bg-[#EEF2F2]">
+                {item.media_type === 'video' || item.media_type === 'reel' ? (
+                  <video src={item.file || item.external_url} className="h-full w-full object-cover" muted playsInline preload="metadata" />
+                ) : (
+                  <img src={item.card_image || item.thumbnail || item.file} alt={item.alt_text || item.title || 'Property media'} className="h-full w-full object-cover" />
+                )}
+                {item.is_primary && (
+                  <span className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-md bg-[#496B5A] px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                    <Star size={9} fill="currentColor" /> Primary
+                  </span>
+                )}
+                {(item.media_type === 'video' || item.media_type === 'reel') && (
+                  <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-md bg-black/65 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                    <Film size={10} /> Video
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-[#8b969d]">Existing items remain unchanged; newly selected files are appended when you save.</p>
         </div>
       )}
 
@@ -93,7 +142,7 @@ export default function Step4Media({ files, onChange, form, onFormChange, allowM
         <div>
           <p className="text-xs font-medium text-[#637079] mb-2">
             {files.length} file{files.length > 1 ? 's' : ''} selected
-            &nbsp;·&nbsp; First image is set as primary
+            &nbsp;·&nbsp; First image is the property cover
           </p>
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
             {files.map((file, i) => (
@@ -101,9 +150,11 @@ export default function Step4Media({ files, onChange, form, onFormChange, allowM
                 key={i}
                 file={file}
                 index={i}
-                isPrimary={i === 0}
+                total={files.length}
+                isPrimary={file.type.startsWith('image/') && i === files.findIndex((item) => item.type.startsWith('image/'))}
                 onRemove={removeFile}
                 onMakePrimary={makePrimary}
+                onMove={moveFile}
               />
             ))}
           </div>
@@ -133,14 +184,16 @@ export default function Step4Media({ files, onChange, form, onFormChange, allowM
   )
 }
 
-function PreviewTile({ file, index, isPrimary, onRemove, onMakePrimary }) {
+function PreviewTile({ file, index, total, isPrimary, onRemove, onMakePrimary, onMove }) {
   const isVideo = file.type.startsWith('video/')
-  const url     = URL.createObjectURL(file)
+  const url = useMemo(() => URL.createObjectURL(file), [file])
+
+  useEffect(() => () => URL.revokeObjectURL(url), [url])
 
   return (
     <div className="group relative rounded-xl overflow-hidden border border-[#DDE5E3] aspect-square bg-[#EEF2F2]">
       {isVideo ? (
-        <video src={url} className="h-full w-full object-cover" />
+        <video src={url} className="h-full w-full object-cover" muted playsInline preload="metadata" />
       ) : (
         <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
       )}
@@ -151,8 +204,23 @@ function PreviewTile({ file, index, isPrimary, onRemove, onMakePrimary }) {
         </div>
       )}
 
-      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-        {!isPrimary && (
+      {isVideo && (
+        <div className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-md bg-black/65 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+          <Film size={10} /> Video
+        </div>
+      )}
+
+      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => onMove(index, index - 1)}
+          disabled={index === 0}
+          title="Move left"
+          className="h-7 w-7 rounded-full bg-white/90 flex items-center justify-center text-[#496B5A] hover:bg-white disabled:opacity-40"
+        >
+          <ChevronLeft size={13} />
+        </button>
+        {!isVideo && !isPrimary && (
           <button
             type="button"
             onClick={() => onMakePrimary(index)}
@@ -162,6 +230,15 @@ function PreviewTile({ file, index, isPrimary, onRemove, onMakePrimary }) {
             <Star size={13} />
           </button>
         )}
+        <button
+          type="button"
+          onClick={() => onMove(index, index + 1)}
+          disabled={index === total - 1}
+          title="Move right"
+          className="h-7 w-7 rounded-full bg-white/90 flex items-center justify-center text-[#496B5A] hover:bg-white disabled:opacity-40"
+        >
+          <ChevronRight size={13} />
+        </button>
         <button
           type="button"
           onClick={() => onRemove(index)}

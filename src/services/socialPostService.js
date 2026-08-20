@@ -36,11 +36,12 @@ export async function deleteSocialConnection(id) {
  * @param {string}      payload.platform        - e.g. "facebook"
  * @param {string}      payload.caption         - post caption / text
  * @param {string}      [payload.status]        - "draft" | "scheduled" (default: "draft")
- * @param {File|null}   [payload.image]         - image file to attach
+ * @param {File[]}      [payload.images]        - up to five ordered image files
+ * @param {string[]}    [payload.media_order]   - existing/new image order tokens
  * @param {number|null} [payload.property]      - optional linked property ID
  * @param {string|null} [payload.scheduled_at]  - ISO datetime string if scheduling
  *
- * Sends as multipart/form-data so the image binary is included.
+ * Sends as multipart/form-data so image binaries are included.
  */
 export async function createSocialPost(payload) {
   const form = new FormData()
@@ -50,8 +51,9 @@ export async function createSocialPost(payload) {
   form.append('caption', payload.caption)
   form.append('status', payload.status ?? 'draft')
 
-  if (payload.image instanceof File) {
-    form.append('image', payload.image)
+  payload.images?.forEach((image) => form.append('images', image))
+  if (payload.media_order !== undefined) {
+    form.append('media_order', JSON.stringify(payload.media_order))
   }
   if (payload.property != null) {
     form.append('property', payload.property)
@@ -97,13 +99,14 @@ export async function publishSocialPost(id, platforms) {
 /**
  * PATCH /api/social-posts/posts/{id}/
  * Partially update a social post.
- * Sends as multipart/form-data so an updated image file can be included.
+ * Sends as multipart/form-data so ordered image changes can be included.
  *
  * @param {number} id       - post ID to update
  * @param {Object} payload  - only the fields you want to change
  *   @param {string}      [payload.caption]
  *   @param {string}      [payload.status]       - "draft" | "scheduled"
- *   @param {File|null}   [payload.image]        - new image file (omit to keep existing)
+ *   @param {File[]}      [payload.images]       - newly added image files
+ *   @param {string[]}    [payload.media_order]  - complete ordered media-token list
  *   @param {string|null} [payload.scheduled_at]
  */
 export async function updateSocialPost(id, payload) {
@@ -112,7 +115,10 @@ export async function updateSocialPost(id, payload) {
   if (payload.caption !== undefined) form.append('caption', payload.caption)
   if (payload.status  !== undefined) form.append('status',  payload.status)
   if (payload.scheduled_at !== undefined) form.append('scheduled_at', payload.scheduled_at ?? '')
-  if (payload.image instanceof File)  form.append('image', payload.image)
+  payload.images?.forEach((image) => form.append('images', image))
+  if (payload.media_order !== undefined) {
+    form.append('media_order', JSON.stringify(payload.media_order))
+  }
 
   const { data } = await apiClient.patch(`/social-posts/posts/${id}/`, form, {
     headers: { 'Content-Type': 'multipart/form-data' },

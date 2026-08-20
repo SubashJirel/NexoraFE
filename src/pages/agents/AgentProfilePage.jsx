@@ -23,6 +23,7 @@ function ProfileForm({ profile }) {
     location: profile.location || '', years_experience: profile.years_experience ?? '', bio: profile.bio || '',
     languages: (profile.languages || []).join(', '), specialties: (profile.specialties || []).join(', '),
     linkedin_url: profile.linkedin_url || '', instagram_url: profile.instagram_url || '', facebook_url: profile.facebook_url || '',
+    show_phone_publicly: profile.show_phone_publicly !== false, show_email_publicly: profile.show_email_publicly !== false,
     profile_image: null,
   }))
   const set = (field, value) => setForm((current) => ({ ...current, [field]: value }))
@@ -79,6 +80,7 @@ function ProfileForm({ profile }) {
             <Input label="LinkedIn URL" type="url" value={form.linkedin_url} onChange={(e) => set('linkedin_url', e.target.value)} />
             <Input label="Instagram URL" type="url" value={form.instagram_url} onChange={(e) => set('instagram_url', e.target.value)} />
             <Input label="Facebook URL" type="url" value={form.facebook_url} onChange={(e) => set('facebook_url', e.target.value)} />
+            <div className="sm:col-span-2 grid gap-3 sm:grid-cols-2"><label className="flex items-center gap-2 text-sm text-[#263238]"><input type="checkbox" checked={form.show_phone_publicly} onChange={(e) => set('show_phone_publicly', e.target.checked)} />Show my phone publicly</label><label className="flex items-center gap-2 text-sm text-[#263238]"><input type="checkbox" checked={form.show_email_publicly} onChange={(e) => set('show_email_publicly', e.target.checked)} />Show my email publicly</label></div>
           </div>
           <div className="mt-6 flex justify-end"><Button type="submit" size="lg" loading={mutation.isPending}>Save profile</Button></div>
         </Card>

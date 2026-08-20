@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDown,
@@ -9,11 +9,8 @@ import {
   ExternalLink,
   Globe2,
   Image,
-  Monitor,
   Plus,
   Rocket,
-  Smartphone,
-  Tablet,
   Trash2,
   UploadCloud,
   X,
@@ -27,7 +24,14 @@ import Textarea from "@/components/ui/Textarea";
 import { PageSpinner } from "@/components/ui/Spinner";
 import {
   getWebsiteOnboarding,
+  getWebsiteDomains,
+  claimWebsiteDomain,
+  verifyWebsiteDomain,
+  setPrimaryWebsiteDomain,
+  removeWebsiteDomain,
+  getWebsiteVersions,
   publishWebsite,
+  restoreWebsiteVersion,
   removeWebsiteMedia,
   unpublishWebsite,
   updateWebsiteOnboarding,
@@ -35,45 +39,73 @@ import {
 } from "@/services/agencyService";
 import { useAuthStore } from "@/store/authStore";
 import { useProperties } from "@/hooks/useProperties";
+import WebsiteLivePreview from "@/components/website-editor/WebsiteLivePreview";
 
 const STEPS = [
   [
-    "Agency identity",
-    "Name, public description, and the details visitors use to identify your agency.",
+    "Identity & about",
+    "Agency name, tagline, introduction, and establishment details.",
   ],
   [
-    "Branding & media",
-    "Colours, fonts, logos, hero imagery, favicon, and social-sharing assets.",
+    "Brand & header",
+    "Logo, colours, fonts, hero imagery, favicon, and social-sharing assets.",
   ],
   [
-    "Contact & location",
+    "Contact",
     "Public contact methods, service area, office address, and business hours.",
   ],
   [
-    "Homepage",
+    "Hero & properties",
     "Hero message, calls to action, and featured-property behavior.",
   ],
   [
-    "Company content",
+    "About & services",
     "Mission, vision, story, services, specialities, and areas served.",
   ],
   [
-    "Trust content",
+    "Trust",
     "Statistics, testimonials, and frequently asked questions.",
   ],
   [
-    "Pages & layout",
+    "Pages & sections",
     "Choose pages, header/footer navigation, and homepage section visibility.",
   ],
   [
-    "Social, SEO & legal",
+    "Footer & SEO",
     "Social channels, language, search metadata, and footer content.",
   ],
   [
-    "Preview & publish",
+    "Review & publish",
     "Confirm accuracy, test responsive preview, and publish the current draft.",
   ],
 ].map(([title, description]) => ({ title, description }));
+
+const STEP_PREVIEW_SECTION = {
+  1: "about",
+  2: "header",
+  3: "contact",
+  4: "hero",
+  5: "about",
+  6: "testimonials",
+  7: "featured-properties",
+  8: "footer",
+  9: "hero",
+};
+
+const PREVIEW_SECTION_STEP = {
+  header: 2,
+  hero: 4,
+  properties: 4,
+  "featured-properties": 4,
+  services: 5,
+  about: 5,
+  statistics: 6,
+  testimonials: 6,
+  faqs: 6,
+  agents: 7,
+  contact: 3,
+  footer: 8,
+};
 
 const PAGES = [
   ["home", "Home"],
@@ -120,7 +152,6 @@ const DEFAULT_ENABLED_PAGES = new Set([
   "properties",
   "agents",
   "contact",
-  "schedule-viewing",
   "valuation",
 ]);
 const DEFAULT_CONFIG = {
@@ -238,13 +269,29 @@ function WebsiteWizard({ initial }) {
       STEPS.length,
     ),
   );
-  const [form, setForm] = useState(() => normalizeForm(local?.form || initial));
+  const [form, setForm] = useState(() => normalizeForm(local?.form
+    ? {
+        ...initial,
+        ...local.form,
+        website_draft_config: {
+          ...(initial.website_draft_config || {}),
+          ...(local.form.website_draft_config || {}),
+        },
+      }
+    : initial));
   const [serverState, setServerState] = useState(initial);
   const [saveState, setSaveState] = useState("saved");
+  const [conflict, setConflict] = useState(null);
   const [dirty, setDirty] = useState(false);
   const [previewMode, setPreviewMode] = useState("desktop");
+  const [mobilePane, setMobilePane] = useState("edit");
+  const [localMedia, setLocalMedia] = useState({});
+  const [previewScrollRequest, setPreviewScrollRequest] = useState(0);
   const timer = useRef(null);
+  const revisionRef = useRef(initial.website_draft_revision || 0);
+  const editRevisionRef = useRef(0);
   const propertiesQuery = useProperties();
+  const versionsQuery = useQuery({ queryKey: ["website-versions"], queryFn: getWebsiteVersions });
   const eligibleProperties = useMemo(
     () => (propertiesQuery.data || []).filter((property) =>
       property.is_published &&
@@ -256,16 +303,28 @@ function WebsiteWizard({ initial }) {
   );
 
   const saveMutation = useMutation({
-    mutationFn: updateWebsiteOnboarding,
-    onSuccess: (data) => {
+    scope: { id: `website-autosave-${initial.id}` },
+    mutationFn: ({ data }) => updateWebsiteOnboarding({ base_revision: revisionRef.current, changes: data }),
+    onSuccess: (data, variables) => {
+      revisionRef.current = data.website_draft_revision;
+      setConflict(null);
       setServerState(data);
-      setForm(normalizeForm(data));
-      setDirty(false);
-      setSaveState("saved");
-      localStorage.removeItem(localKey);
       queryClient.setQueryData(["website-onboarding"], data);
+      if (variables.revision === editRevisionRef.current) {
+        // The editor's local state is authoritative while it is open. Replacing
+        // it with an API echo can erase typing made after the request started.
+        setDirty(false);
+        setSaveState("saved");
+        localStorage.removeItem(localKey);
+      }
     },
-    onError: (error) => {
+    onError: (error, variables) => {
+      if (variables.revision !== editRevisionRef.current) return;
+      if (error.response?.status === 409) {
+        setConflict(error.response.data);
+        setSaveState("conflict");
+        return;
+      }
       setSaveState("error");
       toast.error(apiError(error, "Unable to save the website draft."));
     },
@@ -273,6 +332,7 @@ function WebsiteWizard({ initial }) {
   const publishMutation = useMutation({
     mutationFn: publishWebsite,
     onSuccess: (data) => {
+      revisionRef.current = data.website_draft_revision;
       setServerState(data);
       setForm(normalizeForm(data));
       updateAuthAgency({
@@ -280,6 +340,7 @@ function WebsiteWizard({ initial }) {
         is_website_published: true,
       });
       toast.success("Your agency website is live.");
+      queryClient.invalidateQueries({ queryKey: ["website-versions"] });
     },
     onError: (error) =>
       toast.error(apiError(error, "The website could not be published.")),
@@ -293,6 +354,20 @@ function WebsiteWizard({ initial }) {
     },
     onError: (error) =>
       toast.error(apiError(error, "The website could not be unpublished.")),
+  });
+  const restoreMutation = useMutation({
+    mutationFn: restoreWebsiteVersion,
+    onSuccess: ({ website }) => {
+      revisionRef.current = website.website_draft_revision;
+      setServerState(website);
+      setForm(normalizeForm(website));
+      setDirty(false);
+      setSaveState("saved");
+      queryClient.setQueryData(["website-onboarding"], website);
+      queryClient.invalidateQueries({ queryKey: ["website-versions"] });
+      toast.success("The selected version is live as a new published version.");
+    },
+    onError: (error) => toast.error(apiError(error, "Unable to restore this website version.")),
   });
 
   const config = form.website_draft_config;
@@ -319,6 +394,11 @@ function WebsiteWizard({ initial }) {
     }),
     [form.name, config, step],
   );
+  const previewPayload = useMemo(
+    () => buildPreviewPayload(form, serverState, localMedia),
+    [form, serverState, localMedia],
+  );
+  const activePreviewSection = STEP_PREVIEW_SECTION[step] || "hero";
 
   useEffect(() => {
     if (!dirty) return undefined;
@@ -327,7 +407,8 @@ function WebsiteWizard({ initial }) {
       JSON.stringify({ step, form, savedAt: Date.now() }),
     );
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => saveMutation.mutate(payload), 1200);
+    const revision = editRevisionRef.current;
+    timer.current = setTimeout(() => saveMutation.mutate({ data: payload, revision }), 900);
     return () => clearTimeout(timer.current);
   }, [dirty, form, step, localKey, payload]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -342,11 +423,13 @@ function WebsiteWizard({ initial }) {
   }, [dirty, saveMutation.isPending]);
 
   function change(field, value) {
+    editRevisionRef.current += 1;
     setForm((current) => ({ ...current, [field]: value }));
     setDirty(true);
     setSaveState("saving");
   }
   function changeConfig(field, value) {
+    editRevisionRef.current += 1;
     setForm((current) => ({
       ...current,
       website_draft_config: { ...current.website_draft_config, [field]: value },
@@ -358,8 +441,8 @@ function WebsiteWizard({ initial }) {
     clearTimeout(timer.current);
     setSaveState("saving");
     await saveMutation.mutateAsync({
-      ...payload,
-      website_onboarding_step: target,
+      data: { ...payload, website_onboarding_step: target },
+      revision: editRevisionRef.current,
     });
   }
   async function go(target) {
@@ -370,12 +453,52 @@ function WebsiteWizard({ initial }) {
     if (dirty) await save(9);
     publishMutation.mutate();
   }
-  function applyServer(data) {
+  function applyServer(data, mediaKind) {
+    revisionRef.current = data.website_draft_revision;
     setServerState(data);
-    setForm(normalizeForm(data));
-    setDirty(false);
+    if (mediaKind) {
+      const normalized = normalizeForm(data);
+      editRevisionRef.current += 1;
+      setForm((current) => ({
+        ...current,
+        website_draft_config: {
+          ...current.website_draft_config,
+          media: normalized.website_draft_config.media,
+        },
+      }));
+      setDirty(true);
+      setSaveState("saving");
+      setLocalMedia((current) => {
+        const next = { ...current };
+        delete next[mediaKind];
+        return next;
+      });
+    } else {
+      setForm(normalizeForm(data));
+      setDirty(false);
+    }
     queryClient.setQueryData(["website-onboarding"], data);
   }
+  async function reloadLatest() {
+    const latest = conflict?.current || await getWebsiteOnboarding();
+    revisionRef.current = latest.website_draft_revision;
+    setServerState(latest);
+    setForm(normalizeForm(latest));
+    setConflict(null);
+    setDirty(false);
+    setSaveState("saved");
+    localStorage.removeItem(localKey);
+    queryClient.setQueryData(["website-onboarding"], latest);
+  }
+  const previewSectionSelected = useCallback((section) => {
+    const target = PREVIEW_SECTION_STEP[section];
+    if (target) setStep(target);
+  }, []);
+  const previewMedia = useCallback((kind, value) => {
+    setLocalMedia((current) => value
+      ? { ...current, [kind]: value }
+      : Object.fromEntries(Object.entries(current).filter(([key]) => key !== kind)));
+  }, []);
 
   const missing = new Set(serverState.missing_fields || []);
   const canPublish =
@@ -383,30 +506,33 @@ function WebsiteWizard({ initial }) {
     config.accuracy_confirmed;
   const current = STEPS[step - 1];
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="mx-auto max-w-[1800px] space-y-4">
+      <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#496B5A]">
             Website creator
           </p>
-          <h1 className="mt-2 text-3xl font-bold text-[#263238]">
-            Create your agency website
+          <h1 className="mt-1 text-3xl font-bold text-[#263238]">
+            Design your agency website
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#637079]">
-            Your edits remain private until you publish. Every saved field is
-            used by the generated storefront.
+            Edit on the left and see the real website immediately. Changes stay
+            private until you explicitly publish.
           </p>
         </div>
         <div className="text-right">
           <p
-            className={`text-xs font-semibold ${saveState === "error" ? "text-red-600" : "text-[#637079]"}`}
+            className={`text-xs font-semibold ${saveState === "error" ? "text-red-600" : saveState === "conflict" ? "text-amber-700" : "text-[#637079]"}`}
           >
             {saveState === "saving"
               ? "Saving…"
               : saveState === "error"
                 ? "Save failed — retry available"
+                : saveState === "conflict"
+                  ? "This website was updated elsewhere."
                 : "All changes saved"}
           </p>
+          {saveState === "conflict" && <button type="button" onClick={reloadLatest} className="mt-1 text-xs font-semibold text-[#496B5A] underline">Reload latest changes</button>}
           <div className="mt-2 flex items-center gap-3">
             <span className="text-sm font-semibold text-[#496B5A]">
               {serverState.completion_percentage || 0}% complete
@@ -420,61 +546,53 @@ function WebsiteWizard({ initial }) {
           </div>
         </div>
       </header>
-      <div className="grid gap-6 xl:grid-cols-[270px_minmax(0,1fr)]">
-        <Card className="h-fit xl:sticky xl:top-6">
-          <ol className="space-y-1">
-            {STEPS.map((item, index) => {
-              const number = index + 1;
-              return (
-                <li key={item.title}>
-                  <button
-                    type="button"
-                    onClick={() => go(number)}
-                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm ${number === step ? "bg-[#eef3f0] font-semibold text-[#496B5A]" : "text-[#637079] hover:bg-[#F8FAFA]"}`}
-                  >
-                    <span
-                      className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${number <= (serverState.website_onboarding_step || 1) ? "bg-[#496B5A] text-white" : "bg-[#EEF2F2]"}`}
-                    >
-                      {number < (serverState.website_onboarding_step || 1) ? (
-                        <Check size={14} />
-                      ) : (
-                        number
-                      )}
-                    </span>
-                    {item.title}
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
-        </Card>
-        <Card padding="lg">
-          <div className="border-b border-[#DDE5E3] pb-5">
+      <DomainSettings />
+      <details className="rounded-xl border border-[#DDE5E3] bg-white px-4 py-3">
+        <summary className="cursor-pointer text-sm font-semibold text-[#263238]">Publish history</summary>
+        <div className="mt-3 grid gap-2">
+          {versionsQuery.isLoading && <p className="text-xs text-[#637079]">Loading published versions…</p>}
+          {(versionsQuery.data || []).map((version) => <div key={version.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-[#F8FAFA] px-3 py-2"><div><p className="text-sm font-semibold text-[#263238]">Version {version.version}{version.is_current ? " · Current" : ""}</p><p className="text-xs text-[#637079]">Published {new Date(version.published_at).toLocaleString()} by {version.published_by_name || "System"}{version.restored_from_version ? ` · Restored from v${version.restored_from_version}` : ""}</p></div>{!version.is_current && <Button type="button" variant="outlined" size="sm" disabled={restoreMutation.isPending} onClick={() => restoreMutation.mutate(version.version)}>Restore</Button>}</div>)}
+          {!versionsQuery.isLoading && !(versionsQuery.data || []).length && <p className="text-xs text-[#637079]">Published versions will appear here after the first publish.</p>}
+        </div>
+      </details>
+      <div className="flex rounded-xl border border-[#DDE5E3] bg-white p-1 xl:hidden">
+        {[['edit', 'Edit website'], ['preview', 'Preview website']].map(([key, label]) => <button key={key} type="button" onClick={() => setMobilePane(key)} className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold ${mobilePane === key ? 'bg-[#496B5A] text-white' : 'text-[#637079]'}`}>{label}</button>)}
+      </div>
+      <div className="grid min-h-0 gap-4 xl:h-[calc(100vh-10.5rem)] xl:min-h-[720px] xl:grid-cols-[minmax(430px,40%)_minmax(0,60%)]">
+        <Card padding="none" className={`${mobilePane === "preview" ? "hidden" : "flex"} min-h-[720px] flex-col overflow-hidden xl:flex xl:min-h-0`}>
+          <nav className="border-b border-[#DDE5E3] p-3" aria-label="Website editor sections">
+            <ol className="grid grid-cols-2 gap-1 sm:grid-cols-3">
+              {STEPS.map((item, index) => {
+                const number = index + 1;
+                return <li key={item.title}><button type="button" onClick={() => setStep(number)} className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs ${number === step ? "bg-[#eef3f0] font-semibold text-[#496B5A]" : "text-[#637079] hover:bg-[#F8FAFA]"}`}><span className={`grid size-5 shrink-0 place-items-center rounded-full text-[10px] font-bold ${number === step ? "bg-[#496B5A] text-white" : "bg-[#EEF2F2]"}`}>{number < (serverState.website_onboarding_step || 1) ? <Check size={11} /> : number}</span><span className="truncate">{item.title}</span></button></li>;
+              })}
+            </ol>
+          </nav>
+          <div className="border-b border-[#DDE5E3] px-5 py-4">
             <p className="text-xs font-bold uppercase tracking-wide text-[#8b969d]">
               Step {step} of {STEPS.length}
             </p>
-            <h2 className="mt-2 text-2xl font-bold text-[#263238]">
+            <h2 className="mt-1 text-xl font-bold text-[#263238]">
               {current.title}
             </h2>
             <p className="mt-1 text-sm text-[#637079]">{current.description}</p>
           </div>
-          <div className="py-6">
-            {renderStep({
-              step,
-              form,
-              change,
-              changeConfig,
-              applyServer,
-              serverState,
-              missing,
-              setStep,
-              previewMode,
-              setPreviewMode,
-              eligibleProperties,
-              propertiesLoading: propertiesQuery.isLoading,
-            })}
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5" onFocusCapture={() => setPreviewScrollRequest((value) => value + 1)}>
+            <WebsiteEditorStep
+              step={step}
+              form={form}
+              change={change}
+              changeConfig={changeConfig}
+              applyServer={applyServer}
+              serverState={serverState}
+              missing={missing}
+              setStep={setStep}
+              previewMedia={previewMedia}
+              eligibleProperties={eligibleProperties}
+              propertiesLoading={propertiesQuery.isLoading}
+            />
           </div>
-          <div className="flex flex-col-reverse gap-3 border-t border-[#DDE5E3] pt-5 sm:flex-row sm:justify-between">
+          <div className="flex flex-col-reverse gap-2 border-t border-[#DDE5E3] px-5 py-3 sm:flex-row sm:justify-between">
             <Button
               variant="outlined"
               leftIcon={<ArrowLeft size={15} />}
@@ -530,12 +648,77 @@ function WebsiteWizard({ initial }) {
             </div>
           </div>
         </Card>
+        <div className={`${mobilePane === "edit" ? "hidden" : "block"} min-h-[720px] xl:block xl:min-h-0`}>
+          <WebsiteLivePreview
+            payload={previewPayload}
+            activeSection={activePreviewSection}
+            scrollRequest={previewScrollRequest}
+            device={previewMode}
+            onDeviceChange={setPreviewMode}
+            onSectionSelect={previewSectionSelected}
+          />
+        </div>
       </div>
     </div>
   );
 }
 
-function renderStep(props) {
+function DomainSettings() {
+  const queryClient = useQueryClient();
+  const [domain, setDomain] = useState("");
+  const query = useQuery({ queryKey: ["website-domains"], queryFn: getWebsiteDomains });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["website-domains"] });
+  const claim = useMutation({
+    mutationFn: claimWebsiteDomain,
+    onSuccess: () => { setDomain(""); refresh(); toast.success("Domain claimed. Add the DNS records shown below."); },
+    onError: (error) => toast.error(apiError(error, "Unable to claim this domain.")),
+  });
+  const verify = useMutation({
+    mutationFn: verifyWebsiteDomain,
+    onSuccess: () => { refresh(); toast.success("Domain ownership verified."); },
+    onError: (error) => { refresh(); toast.error(apiError(error, "The verification record is not visible yet.")); },
+  });
+  const primary = useMutation({
+    mutationFn: setPrimaryWebsiteDomain,
+    onSuccess: () => { refresh(); toast.success("Primary website domain updated."); },
+    onError: (error) => toast.error(apiError(error, "Unable to set this domain as primary.")),
+  });
+  const remove = useMutation({
+    mutationFn: removeWebsiteDomain,
+    onSuccess: () => { refresh(); toast.success("Domain removed."); },
+    onError: (error) => toast.error(apiError(error, "Unable to remove this domain.")),
+  });
+  return (
+    <details className="rounded-xl border border-[#DDE5E3] bg-white px-4 py-3">
+      <summary className="cursor-pointer text-sm font-semibold text-[#263238]">Custom domain</summary>
+      <div className="mt-4 space-y-4">
+        <form className="flex flex-col gap-2 sm:flex-row" onSubmit={(event) => { event.preventDefault(); claim.mutate(domain); }}>
+          <Input value={domain} onChange={(event) => setDomain(event.target.value)} placeholder="agency.com" aria-label="Custom domain" />
+          <Button type="submit" loading={claim.isPending} disabled={!domain.trim()}>Claim domain</Button>
+        </form>
+        <p className="text-xs text-[#637079]">Claiming reserves the hostname. It will not serve the website until ownership is verified and it is selected as primary.</p>
+        {(query.data || []).map((item) => (
+          <div key={item.id} className="rounded-xl border border-[#DDE5E3] p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div><p className="font-semibold text-[#263238]">{item.domain}</p><p className="mt-1 text-xs font-semibold uppercase tracking-wide text-[#496B5A]">{item.is_primary ? "Verified · Primary" : item.status.replace("_", " ")}</p></div>
+              <div className="flex flex-wrap gap-2">
+                {item.status !== "verified" && <Button size="sm" variant="outlined" loading={verify.isPending} onClick={() => verify.mutate(item.id)}>Check verification</Button>}
+                {item.status === "verified" && !item.is_primary && <Button size="sm" variant="outlined" loading={primary.isPending} onClick={() => primary.mutate(item.id)}>Set as primary</Button>}
+                <Button size="sm" variant="ghost-danger" loading={remove.isPending} onClick={() => remove.mutate(item.id)}>Remove</Button>
+              </div>
+            </div>
+            {item.status !== "verified" && <div className="mt-4 grid gap-3 text-xs sm:grid-cols-2">
+              {[item.verification_record, item.routing_record].map((record) => <div key={record.type} className="rounded-lg bg-[#F8FAFA] p-3"><p className="font-semibold">{record.type} record</p><p className="mt-2 break-all text-[#637079]">Host: <span className="font-mono text-[#263238]">{record.host}</span></p><p className="mt-1 break-all text-[#637079]">Value: <span className="font-mono text-[#263238]">{record.value}</span></p></div>)}
+            </div>}
+          </div>
+        ))}
+        {!query.isLoading && !(query.data || []).length && <p className="text-sm text-[#637079]">No custom domain claimed yet. Your Nexora subdomain remains the canonical website address.</p>}
+      </div>
+    </details>
+  );
+}
+
+function WebsiteEditorStep(props) {
   const {
     step,
     form,
@@ -545,8 +728,7 @@ function renderStep(props) {
     serverState,
     missing,
     setStep,
-    previewMode,
-    setPreviewMode,
+    previewMedia,
     eligibleProperties,
     propertiesLoading,
   } = props;
@@ -592,14 +774,15 @@ function renderStep(props) {
               kind={kind}
               label={label}
               url={serverState.media_urls?.[kind]}
-              onComplete={applyServer}
+              onLocalPreview={(value) => previewMedia(kind, value)}
+              onComplete={(data) => applyServer(data, kind)}
             />
           ))}
         </div>
         <PartnerLogosField
           paths={c.media?.partner_logos || []}
           urls={serverState.media_urls?.partner_logos || []}
-          onComplete={applyServer}
+          onComplete={(data) => applyServer(data, "partner_logos")}
         />
         <div className="grid gap-4 sm:grid-cols-3">
           <ColorField
@@ -869,7 +1052,7 @@ function renderStep(props) {
         />
       </div>
     );
-  if (step === 7) return <PagesStep config={c} changeConfig={changeConfig} />;
+  if (step === 7) return <PagesStep config={c} changeConfig={changeConfig} capabilities={serverState.template_capabilities} />;
   if (step === 8)
     return (
       <div className="space-y-6">
@@ -995,11 +1178,6 @@ function renderStep(props) {
           </span>
         </span>
       </label>
-      <PreviewPanel
-        url={serverState.preview_url}
-        mode={previewMode}
-        setMode={setPreviewMode}
-      />
       {serverState.is_website_published && (
         <a
           href={serverState.website_url}
@@ -1015,16 +1193,20 @@ function renderStep(props) {
   );
 }
 
-function PagesStep({ config, changeConfig }) {
+function PagesStep({ config, changeConfig, capabilities }) {
+  const supportedPageKeys = capabilities?.supported_pages || PAGES.map(([key]) => key);
+  const supportedSectionKeys = capabilities?.supported_sections || SECTIONS.map(([key]) => key);
+  const supportedPages = PAGES.filter(([key]) => supportedPageKeys.includes(key));
+  const supportedSections = SECTIONS.filter(([key]) => supportedSectionKeys.includes(key));
   const nav = (config.navigation.length
     ? config.navigation
-    : PAGES.filter(([key]) => config.enabled_pages[key]).map(
+    : supportedPages.filter(([key]) => config.enabled_pages[key]).map(
         ([page, label]) => ({
           page,
           label,
           url: page === "home" ? "/" : `/${page}`,
         }),
-      )).filter((item) => item.page !== "portal");
+      )).filter((item) => supportedPageKeys.includes(item.page));
   function toggle(page, checked) {
     changeConfig("enabled_pages", { ...config.enabled_pages, [page]: checked });
   }
@@ -1044,7 +1226,7 @@ function PagesStep({ config, changeConfig }) {
   function moveSection(index, delta) {
     const current = config.section_order?.length
       ? [...config.section_order]
-      : SECTIONS.map(([key]) => key);
+      : supportedSections.map(([key]) => key);
     const target = index + delta;
     if (target < 0 || target >= current.length) return;
     [current[index], current[target]] = [current[target], current[index]];
@@ -1055,7 +1237,7 @@ function PagesStep({ config, changeConfig }) {
       <div>
         <h3 className="font-semibold">Enabled public pages</h3>
         <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {PAGES.map(([key, label]) => (
+          {supportedPages.map(([key, label]) => (
             <label
               key={key}
               className="flex items-center gap-2 rounded-lg border border-[#DDE5E3] p-3 text-sm"
@@ -1139,9 +1321,9 @@ function PagesStep({ config, changeConfig }) {
         <div className="mt-3 space-y-2">
           {(config.section_order?.length
             ? config.section_order
-            : SECTIONS.map(([key]) => key)
+            : supportedSections.map(([key]) => key)
           ).map((key, index) => {
-            const label = SECTIONS.find(([candidate]) => candidate === key)?.[1] || key;
+            const label = supportedSections.find(([candidate]) => candidate === key)?.[1] || key;
             return (
             <div
               key={key}
@@ -1227,15 +1409,19 @@ function ManualFeaturedProperties({ properties, loading, selected, limit, onChan
   );
 }
 
-function MediaField({ kind, label, url, onComplete }) {
+function MediaField({ kind, label, url, onComplete, onLocalPreview }) {
   const [progress, setProgress] = useState(0);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [selectedUrl, setSelectedUrl] = useState("");
   async function upload(file) {
     if (!file) return;
     setPending(true);
     setError("");
     try {
+      const immediateUrl = await fileAsDataUrl(file);
+      setSelectedUrl(immediateUrl);
+      onLocalPreview?.(immediateUrl);
       const data = await uploadWebsiteMedia({
         kind,
         file,
@@ -1245,6 +1431,7 @@ function MediaField({ kind, label, url, onComplete }) {
           ),
       });
       onComplete(data);
+      setSelectedUrl("");
     } catch (requestError) {
       setError(apiError(requestError, "Upload failed."));
     } finally {
@@ -1254,6 +1441,8 @@ function MediaField({ kind, label, url, onComplete }) {
   async function remove() {
     setPending(true);
     try {
+      setSelectedUrl("");
+      onLocalPreview?.("");
       onComplete(await removeWebsiteMedia(kind));
     } catch (requestError) {
       setError(apiError(requestError, "Unable to remove image."));
@@ -1275,9 +1464,9 @@ function MediaField({ kind, label, url, onComplete }) {
           upload(event.dataTransfer.files?.[0]);
         }}
       >
-        {url ? (
+        {selectedUrl || url ? (
           <img
-            src={url}
+            src={selectedUrl || url}
             alt={`${label} preview`}
             className="h-32 w-full object-contain"
           />
@@ -1370,49 +1559,6 @@ function PartnerLogosField({ paths, urls, onComplete }) {
       {urls.length ? <div className="mt-4 flex flex-wrap gap-3">{urls.map((url, index) => <div key={`${url}-${index}`} className="relative flex h-20 w-32 items-center justify-center rounded-lg border border-[#DDE5E3] bg-white p-2"><img src={url} alt={`Partner ${index + 1}`} className="max-h-14 max-w-full object-contain" /><button type="button" onClick={() => remove(paths[index])} disabled={pending} className="absolute -right-2 -top-2 flex size-6 items-center justify-center rounded-full bg-red-600 text-white" aria-label={`Remove partner ${index + 1}`}><X size={13} /></button></div>)}</div> : <p className="mt-4 text-sm text-[#637079]">No partner logos added.</p>}
       {pending && <div className="mt-3 h-1 overflow-hidden rounded bg-[#DDE5E3]"><div className="h-full bg-[#496B5A]" style={{ width: `${progress || 35}%` }} /></div>}
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
-    </div>
-  );
-}
-function PreviewPanel({ url, mode, setMode }) {
-  const widths = { desktop: "100%", tablet: "768px", mobile: "390px" };
-  return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1">
-          {[
-            ["desktop", Monitor],
-            ["tablet", Tablet],
-            ["mobile", Smartphone],
-          ].map(([key, Icon]) => (
-            <Button
-              key={key}
-              size="sm"
-              variant={mode === key ? "primary" : "outlined"}
-              onClick={() => setMode(key)}
-            >
-              <Icon size={14} />
-            </Button>
-          ))}
-        </div>
-        <a
-          href={url}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-[#496B5A]"
-        >
-          <ExternalLink size={14} />
-          Open preview in new tab
-        </a>
-      </div>
-      <div className="mt-3 overflow-auto rounded-xl border border-[#DDE5E3] bg-[#EEF2F2] p-3">
-        <iframe
-          key={url}
-          title="Draft website preview"
-          src={url}
-          className="mx-auto h-[650px] rounded-lg bg-white"
-          style={{ width: widths[mode], maxWidth: "100%" }}
-        />
-      </div>
     </div>
   );
 }
@@ -1530,29 +1676,81 @@ function ListEditor({ title, items, maximum, empty, fields, onChange }) {
 }
 function normalizeForm(data) {
   const draft = data.website_draft_config || {};
+  const supportedPages = new Set(data.template_capabilities?.supported_pages || PAGES.map(([key]) => key));
+  const supportedSections = new Set(data.template_capabilities?.supported_sections || SECTIONS.map(([key]) => key));
   const enabledPages = {
     ...DEFAULT_CONFIG.enabled_pages,
     ...(draft.enabled_pages || {}),
   };
   delete enabledPages.portal;
+  Object.keys(enabledPages).forEach((key) => {
+    if (!supportedPages.has(key)) enabledPages[key] = false;
+  });
+  const sectionVisibility = {
+    ...DEFAULT_CONFIG.section_visibility,
+    ...(draft.section_visibility || {}),
+  };
+  Object.keys(sectionVisibility).forEach((key) => {
+    if (!supportedSections.has(key)) sectionVisibility[key] = false;
+  });
   return {
     ...data,
     website_draft_config: {
       ...DEFAULT_CONFIG,
       ...draft,
       enabled_pages: enabledPages,
-      navigation: (draft.navigation || []).filter((item) => item.page !== "portal"),
-      footer_navigation: (draft.footer_navigation || []).filter((item) => item.page !== "portal"),
-      section_visibility: {
-        ...DEFAULT_CONFIG.section_visibility,
-        ...(draft.section_visibility || {}),
-      },
+      navigation: (draft.navigation || []).filter((item) => supportedPages.has(item.page)),
+      footer_navigation: (draft.footer_navigation || []).filter((item) => supportedPages.has(item.page)),
+      section_visibility: sectionVisibility,
+      section_order: (draft.section_order || DEFAULT_CONFIG.section_order).filter((key) => supportedSections.has(key)),
       media: {
         ...DEFAULT_CONFIG.media,
         ...(draft.media || {}),
       },
     },
   };
+}
+function buildPreviewPayload(form, serverState, localMedia) {
+  const config = form.website_draft_config || DEFAULT_CONFIG;
+  const media = { ...(config.media || {}) };
+  Object.entries(serverState.media_urls || {}).forEach(([key, value]) => {
+    if (value) media[key] = value;
+  });
+  Object.entries(localMedia).forEach(([key, value]) => {
+    if (value) media[key] = value;
+  });
+  const websiteConfig = { ...config, media };
+  return {
+    agency: {
+      id: form.id,
+      name: form.name,
+      slug: form.slug,
+      license_number: form.license_number,
+      website_config: websiteConfig,
+      logo: media.logo || "",
+      cover_image: media.hero_image || "",
+      email: websiteConfig.public_email,
+      phone: websiteConfig.public_phone,
+      address: websiteConfig.address,
+      business_hours: websiteConfig.business_hours,
+      primary_color: websiteConfig.primary_color,
+      facebook_url: websiteConfig.facebook_url,
+      instagram_url: websiteConfig.instagram_url,
+      linkedin_url: websiteConfig.linkedin_url,
+      youtube_url: websiteConfig.youtube_url,
+      tiktok_url: websiteConfig.tiktok_url,
+      whatsapp_number: websiteConfig.whatsapp_number,
+      viber_number: websiteConfig.viber_number,
+    },
+  };
+}
+function fileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("Unable to preview this image."));
+    reader.readAsDataURL(file);
+  });
 }
 function readLocal(key) {
   try {

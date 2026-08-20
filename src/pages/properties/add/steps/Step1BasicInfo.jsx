@@ -91,6 +91,16 @@ export default function Step1BasicInfo({ form, errors, onChange }) {
         </Select>
       </div>
 
+      {['rent', 'lease'].includes(form.purpose) && <Select
+        label="Price period"
+        value={form.rent_period || 'month'}
+        onChange={(e) => onChange('rent_period', e.target.value)}
+      >
+        <option value="week">Per week</option>
+        <option value="month">Per month</option>
+        <option value="year">Per year</option>
+      </Select>}
+
       {/* Province */}
       <Select
         label="Province"

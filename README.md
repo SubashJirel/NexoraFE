@@ -53,4 +53,5 @@ Public storefront URLs use `/agency/:slug`, with canonical listing pages at `/ag
 - Configure SPA history fallback so browser refreshes resolve to `index.html`.
 - Serve the generated `dist/` directory through a CDN or static host.
 - Configure `VITE_PAYMENT_URL` and `VITE_SUPPORT_EMAIL` for agency activation.
-- Set `VITE_STOREFRONT_URL` to the standalone Next.js storefront origin for website previews.
+- Published website URLs are supplied by the agency API. Draft preview URLs remain server-managed so the CRM and public template do not construct competing tenant URLs.
+- The visual website editor embeds the real `NexoraTemplate` app. Set `VITE_WEBSITE_PREVIEW_URL` to its preview-mode URL and `VITE_WEBSITE_PREVIEW_ORIGIN` to the exact origin allowed for `postMessage` communication. Local defaults use `http://localhost:5174/?preview=1` and `http://localhost:5174`.
