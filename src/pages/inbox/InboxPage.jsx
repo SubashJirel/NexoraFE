@@ -169,7 +169,10 @@ function ConversationHeader({ conversation, onBack }) {
       <Avatar alt={conversation.contact?.display_name || 'Contact'} src={conversation.contact?.profile_image_url} size="md" />
       <div className="min-w-0 flex-1">
         <p className="truncate font-semibold text-[#263238]">{conversation.contact?.display_name || conversation.contact?.username || 'Unknown contact'}</p>
-        <p className="text-xs text-[#637079]">{conversation.platform} · {conversation.account_name}</p>
+        <p className="text-xs text-[#637079]">
+          {conversation.platform} · {conversation.account_name}
+          {conversation.source_social_post ? ` · From social post #${conversation.source_social_post}` : ''}
+        </p>
       </div>
       <Badge variant={statusVariant(conversation.status)}>{conversation.status}</Badge>
     </div>

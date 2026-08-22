@@ -3,6 +3,8 @@ import {
   getSocialConnections,
   startMetaConnection,
   deleteSocialConnection,
+  getMetaConnectionSession,
+  completeMetaConnectionSession,
 } from '@/services/socialPostService'
 import toast from 'react-hot-toast'
 
@@ -57,6 +59,36 @@ export function useDisconnectSocialAccount() {
         err.response?.data?.message ||
         'Failed to disconnect. Please try again.'
       toast.error(msg)
+    },
+  })
+}
+
+export function useMetaConnectionSession(token) {
+  return useQuery({
+    queryKey: ['meta-connection-session', token],
+    queryFn: () => getMetaConnectionSession(token),
+    enabled: Boolean(token),
+    retry: false,
+  })
+}
+
+export function useCompleteMetaConnectionSession({ onSuccess } = {}) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ token, pageIds }) => completeMetaConnectionSession(token, pageIds),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: SOCIAL_CONNECTIONS_KEY })
+      const warning = data.warning_count
+        ? ` ${data.warning_count} capability warning${data.warning_count === 1 ? '' : 's'} need attention.`
+        : ''
+      toast.success(`${data.connected_count} social account${data.connected_count === 1 ? '' : 's'} connected.${warning}`)
+      onSuccess?.(data)
+    },
+    onError: (err) => {
+      toast.error(
+        err.response?.data?.detail ||
+        'Could not connect the selected Meta Pages. Please try again.',
+      )
     },
   })
 }

@@ -23,7 +23,13 @@ export function useSiteVisits(filters = {}) {
   return useQuery({
     queryKey: [...SITE_VISITS_KEY, filters],
     queryFn:  () => getSiteVisits(filters),
-    staleTime: 1000 * 60 * 2, // 2 min
+    // Public website requests are created outside this React application, so
+    // there is no local mutation available to invalidate this cache. Always
+    // refresh when staff open or return to the page, and poll while it is open.
+    staleTime: 15_000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: 'always',
+    refetchInterval: 30_000,
   })
 }
 

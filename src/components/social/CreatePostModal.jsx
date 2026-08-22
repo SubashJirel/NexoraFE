@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, ImagePlus, Trash2, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Film, ImagePlus, Trash2, Upload, X } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import Button from '@/components/ui/Button'
 import Textarea from '@/components/ui/Textarea'
@@ -27,6 +27,10 @@ const MAX_POST_IMAGES = 5
 const MIN_IMAGE_WIDTH = 320
 const MIN_ASPECT_RATIO = 0.8
 const MAX_ASPECT_RATIO = 1.91
+const MAX_REEL_SOURCE_BYTES = 250 * 1024 * 1024
+const MIN_REEL_DURATION = 4
+const MAX_REEL_DURATION = 60
+const REEL_RATIO_TOLERANCE = 0.03
 
 function initialMediaItems(post) {
   if (Array.isArray(post?.media) && post.media.length > 0) {
@@ -79,6 +83,44 @@ function inspectImage(file) {
       reject(new Error(`${file.name} could not be read as an image.`))
     }
     image.src = preview
+  })
+}
+
+function inspectReel(file) {
+  return new Promise((resolve, reject) => {
+    const extensionAllowed = /\.(mp4|mov|m4v)$/i.test(file.name)
+    if (!extensionAllowed || (file.type && !file.type.startsWith('video/'))) {
+      reject(new Error('Upload an MP4, MOV, or M4V video.'))
+      return
+    }
+    if (file.size > MAX_REEL_SOURCE_BYTES) {
+      reject(new Error('The source video cannot exceed 250 MB.'))
+      return
+    }
+    const preview = URL.createObjectURL(file)
+    const video = document.createElement('video')
+    video.preload = 'metadata'
+    video.onloadedmetadata = () => {
+      const { duration, videoWidth: width, videoHeight: height } = video
+      const ratio = width / height
+      if (duration < MIN_REEL_DURATION || duration > MAX_REEL_DURATION) {
+        URL.revokeObjectURL(preview)
+        reject(new Error('A Reel must be between 4 and 60 seconds long.'))
+      } else if (width < 540 || height < 960) {
+        URL.revokeObjectURL(preview)
+        reject(new Error('A Reel must be at least 540x960 pixels.'))
+      } else if (Math.abs(ratio - (9 / 16)) > REEL_RATIO_TOLERANCE) {
+        URL.revokeObjectURL(preview)
+        reject(new Error(`A Reel must be vertical 9:16. This video is ${width}x${height}.`))
+      } else {
+        resolve({ preview, duration, width, height })
+      }
+    }
+    video.onerror = () => {
+      URL.revokeObjectURL(preview)
+      reject(new Error('The selected video could not be read.'))
+    }
+    video.src = preview
   })
 }
 
@@ -221,6 +263,61 @@ function ImageGalleryField({ items, error, isValidating, onFiles, onMove, onRemo
   )
 }
 
+function ReelField({ item, error, isValidating, onFile, onRemove }) {
+  const inputRef = useRef(null)
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium text-[#263238]">Reel video</span>
+      {item ? (
+        <div className="overflow-hidden rounded-xl border border-[#DDE5E3] bg-black">
+          <div className="relative mx-auto aspect-[9/16] max-h-[360px] w-auto max-w-full">
+            <video src={item.preview} controls playsInline preload="metadata" className="h-full w-full object-contain" />
+            <button
+              type="button"
+              onClick={onRemove}
+              className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/65 text-white hover:bg-black/80"
+              aria-label="Remove Reel video"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-white px-3 py-2 text-xs text-[#637079]">
+            <span className="min-w-0 truncate">{item.name}</span>
+            <span>{item.duration ? `${Math.round(item.duration)} sec` : 'Compressed Reel'}</span>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#DDE5E3] bg-[#F8FAFA] py-8 hover:border-[#B8C9C5] hover:bg-[#f0f4f2]"
+        >
+          <Upload size={25} className="text-[#8b969d]" />
+          <span className="text-sm font-semibold text-[#496B5A]">Choose Reel video</span>
+          <span className="px-4 text-center text-xs text-[#8b969d]">
+            MP4/MOV · vertical 9:16 · 4–60 sec · stored output compressed to 15 MB or less
+          </span>
+        </button>
+      )}
+      {isValidating && <p className="text-xs font-medium text-[#496B5A]">Checking video…</p>}
+      {error && <p className="text-xs font-medium text-red-600">{error}</p>}
+      <p className="text-xs text-[#637079]">
+        Nexora converts the upload to 720x1280 H.264 before saving it. Processing can take a moment.
+      </p>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="video/mp4,video/quicktime,video/x-m4v,.mp4,.mov,.m4v"
+        className="hidden"
+        onChange={(event) => {
+          onFile(event.target.files?.[0])
+          event.target.value = ''
+        }}
+      />
+    </div>
+  )
+}
+
 // ── modal ─────────────────────────────────────────────────────
 
 /**
@@ -244,10 +341,20 @@ function PostFormModal({ onClose, connections = [], post }) {
 
   // ── form state ──────────────────────────────────────────────
   const [accountId, setAccountId] = useState(() => String(post?.social_account ?? ''))
+  const [targetPlatforms, setTargetPlatforms] = useState(() => (
+    post?.target_platforms?.length ? post.target_platforms : post?.platform ? [post.platform] : []
+  ))
   const [caption, setCaption] = useState(() => post?.caption ?? '')
   const [status, setStatus] = useState(() => post?.status ?? 'draft')
   const [scheduledAt, setScheduledAt] = useState(() => toLocalDateTimeValue(post?.scheduled_at))
+  const [postFormat, setPostFormat] = useState(() => post?.post_format ?? (post?.video ? 'reel' : 'image'))
   const [mediaItems, setMediaItems] = useState(() => initialMediaItems(post))
+  const [videoItem, setVideoItem] = useState(() => post?.video ? ({
+    kind: 'existing',
+    preview: post.video,
+    name: 'Current Reel',
+    duration: post.video_duration_seconds,
+  }) : null)
   const [mediaError, setMediaError] = useState('')
   const [isValidatingMedia, setIsValidatingMedia] = useState(false)
 
@@ -263,6 +370,18 @@ function PostFormModal({ onClose, connections = [], post }) {
 
   // ── derived ─────────────────────────────────────────────────
   const selectedAccount = connections.find((c) => String(c.id) === String(accountId))
+  const linkedAccounts = selectedAccount
+    ? connections.filter((account) => (
+        account.status === 'connected' &&
+        account.page_id &&
+        account.page_id === selectedAccount.page_id
+      ))
+    : []
+  const availablePlatforms = [...new Set(
+    (linkedAccounts.length ? linkedAccounts : selectedAccount ? [selectedAccount] : [])
+      .map((account) => account.platform)
+      .filter(Boolean)
+  )]
   const captionMax    = 2200
   const captionLength = caption.length
 
@@ -272,7 +391,20 @@ function PostFormModal({ onClose, connections = [], post }) {
     mediaItems.forEach((item) => {
       if (item.kind === 'new') URL.revokeObjectURL(item.preview)
     })
+    if (videoItem?.kind === 'new') URL.revokeObjectURL(videoItem.preview)
     onClose()
+  }
+
+  function handleFormatChange(nextFormat) {
+    if (isEditMode || nextFormat === postFormat) return
+    mediaItems.forEach((item) => {
+      if (item.kind === 'new') URL.revokeObjectURL(item.preview)
+    })
+    if (videoItem?.kind === 'new') URL.revokeObjectURL(videoItem.preview)
+    setMediaItems([])
+    setVideoItem(null)
+    setMediaError('')
+    setPostFormat(nextFormat)
   }
 
   async function handleFiles(files) {
@@ -328,7 +460,58 @@ function PostFormModal({ onClose, connections = [], post }) {
     })
   }
 
+  async function handleVideoFile(file) {
+    if (!file) return
+    setMediaError('')
+    setIsValidatingMedia(true)
+    try {
+      const inspected = await inspectReel(file)
+      if (videoItem?.kind === 'new') URL.revokeObjectURL(videoItem.preview)
+      setVideoItem({ ...inspected, file, kind: 'new', name: file.name })
+    } catch (error) {
+      setMediaError(error.message || 'The selected Reel video is invalid.')
+    } finally {
+      setIsValidatingMedia(false)
+    }
+  }
+
+  function handleRemoveVideo() {
+    if (videoItem?.kind === 'new') URL.revokeObjectURL(videoItem.preview)
+    setVideoItem(null)
+    setMediaError('')
+  }
+
+  function handleAccountChange(event) {
+    const nextAccountId = event.target.value
+    const nextAccount = connections.find((account) => String(account.id) === nextAccountId)
+    const nextPlatforms = nextAccount
+      ? [...new Set(connections
+          .filter((account) => (
+            account.status === 'connected' &&
+            account.page_id &&
+            account.page_id === nextAccount.page_id
+          ))
+          .map((account) => account.platform))]
+      : []
+    setAccountId(nextAccountId)
+    setTargetPlatforms(nextPlatforms.length ? nextPlatforms : nextAccount ? [nextAccount.platform] : [])
+  }
+
+  function toggleTargetPlatform(platform) {
+    setTargetPlatforms((current) => (
+      current.includes(platform)
+        ? current.filter((item) => item !== platform)
+        : [...current, platform]
+    ))
+  }
+
   function buildMediaPayload() {
+    if (postFormat === 'reel') {
+      return {
+        post_format: 'reel',
+        ...(videoItem?.kind === 'new' ? { video: videoItem.file } : {}),
+      }
+    }
     const images = mediaItems
       .filter((item) => item.kind === 'new')
       .map((item) => item.file)
@@ -341,12 +524,31 @@ function PostFormModal({ onClose, connections = [], post }) {
       if (item.kind === 'legacy') return 'legacy:0'
       return `new:${newIndexes.get(item.key)}`
     })
-    return { images, media_order }
+    return { post_format: 'image', images, media_order }
   }
 
   function handleSubmit(e) {
     e.preventDefault()
     if (isValidatingMedia || mediaError) return
+    if (!targetPlatforms.length) return
+    if (postFormat === 'reel' && !videoItem) {
+      setMediaError('Upload a Reel video before saving.')
+      return
+    }
+    if (postFormat === 'image' && targetPlatforms.includes('instagram')) {
+      if (mediaItems.length === 0) {
+        setMediaError('Instagram publishing requires at least one JPEG image.')
+        return
+      }
+      const invalidInstagramImage = mediaItems.find((item) => {
+        if (item.kind === 'new') return item.file?.type !== 'image/jpeg'
+        return item.preview && !/\.jpe?g(?:$|\?)/i.test(item.preview)
+      })
+      if (invalidInstagramImage) {
+        setMediaError('Instagram publishing requires JPEG images. Remove or replace the non-JPEG image.')
+        return
+      }
+    }
     const mediaPayload = buildMediaPayload()
 
     if (isEditMode) {
@@ -355,6 +557,7 @@ function PostFormModal({ onClose, connections = [], post }) {
         id: post.id,
         caption,
         status,
+        target_platforms: targetPlatforms,
         scheduled_at: status === 'scheduled' ? new Date(scheduledAt).toISOString() : null,
         ...mediaPayload,
       })
@@ -364,6 +567,7 @@ function PostFormModal({ onClose, connections = [], post }) {
       createPost({
         social_account: Number(accountId),
         platform: selectedAccount?.platform ?? 'facebook',
+        target_platforms: targetPlatforms,
         caption,
         status,
         scheduled_at: status === 'scheduled' ? new Date(scheduledAt).toISOString() : undefined,
@@ -387,7 +591,7 @@ function PostFormModal({ onClose, connections = [], post }) {
         {/* header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#DDE5E3]">
           <h3 className="text-base font-bold text-[#263238]">
-            {isEditMode ? 'Edit Post' : 'Create Post'}
+            {isEditMode ? `Edit ${postFormat === 'reel' ? 'Reel' : 'Post'}` : 'Create Social Content'}
           </h3>
           <button
             type="button"
@@ -412,7 +616,7 @@ function PostFormModal({ onClose, connections = [], post }) {
               <Select
                 label="Account"
                 value={accountId}
-                onChange={(e) => setAccountId(e.target.value)}
+                onChange={handleAccountChange}
                 required
               >
                 <option value="" disabled>Select a connected account</option>
@@ -444,6 +648,34 @@ function PostFormModal({ onClose, connections = [], post }) {
                   </span>
                 </div>
               )}
+
+              {selectedAccount && availablePlatforms.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <span className="text-sm font-medium text-[#263238]">Publish targets</span>
+                  <div className="flex flex-wrap gap-2">
+                    {availablePlatforms.map((platform) => (
+                      <button
+                        key={platform}
+                        type="button"
+                        onClick={() => toggleTargetPlatform(platform)}
+                        className={cn(
+                          'rounded-full border px-3 py-1.5 text-xs font-semibold capitalize',
+                          targetPlatforms.includes(platform)
+                            ? 'border-[#496B5A] bg-[#eef3f0] text-[#496B5A]'
+                            : 'border-[#DDE5E3] bg-white text-[#637079]'
+                        )}
+                      >
+                        {platform}
+                      </button>
+                    ))}
+                  </div>
+                  {availablePlatforms.length > 1 && (
+                    <p className="text-xs text-[#637079]">
+                      Facebook and Instagram will publish from this linked Page at the same time.
+                    </p>
+                  )}
+                </div>
+              )}
             </>
           )}
 
@@ -463,15 +695,54 @@ function PostFormModal({ onClose, connections = [], post }) {
             </div>
           )}
 
-          {/* ordered images; the first item is the carousel cover */}
-          <ImageGalleryField
-            items={mediaItems}
-            error={mediaError}
-            isValidating={isValidatingMedia}
-            onFiles={handleFiles}
-            onMove={handleMoveMedia}
-            onRemove={handleRemoveMedia}
-          />
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-medium text-[#263238]">Content type</span>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleFormatChange('image')}
+                disabled={isEditMode}
+                className={cn(
+                  'flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold',
+                  postFormat === 'image' ? 'border-[#496B5A] bg-[#eef3f0] text-[#496B5A]' : 'border-[#DDE5E3] text-[#637079]',
+                  isEditMode && 'cursor-default'
+                )}
+              >
+                <ImagePlus size={16} /> Images
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFormatChange('reel')}
+                disabled={isEditMode}
+                className={cn(
+                  'flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold',
+                  postFormat === 'reel' ? 'border-[#496B5A] bg-[#eef3f0] text-[#496B5A]' : 'border-[#DDE5E3] text-[#637079]',
+                  isEditMode && 'cursor-default'
+                )}
+              >
+                <Film size={16} /> Reel
+              </button>
+            </div>
+          </div>
+
+          {postFormat === 'reel' ? (
+            <ReelField
+              item={videoItem}
+              error={mediaError}
+              isValidating={isValidatingMedia}
+              onFile={handleVideoFile}
+              onRemove={handleRemoveVideo}
+            />
+          ) : (
+            <ImageGalleryField
+              items={mediaItems}
+              error={mediaError}
+              isValidating={isValidatingMedia}
+              onFiles={handleFiles}
+              onMove={handleMoveMedia}
+              onRemove={handleRemoveMedia}
+            />
+          )}
 
           {/* caption */}
           <div className="flex flex-col gap-1.5">
@@ -524,7 +795,7 @@ function PostFormModal({ onClose, connections = [], post }) {
             variant="primary"
             size="md"
             loading={isPending}
-            disabled={(!isEditMode && !accountId) || isValidatingMedia || Boolean(mediaError)}
+            disabled={(!isEditMode && !accountId) || !targetPlatforms.length || isValidatingMedia || Boolean(mediaError)}
           >
             {isEditMode
               ? 'Save Changes'
