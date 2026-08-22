@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import {
   ArrowDown,
   ArrowLeft,
@@ -156,6 +157,7 @@ const DEFAULT_ENABLED_PAGES = new Set([
 ]);
 const DEFAULT_CONFIG = {
   schema_version: 2,
+  display_name: "",
   primary_color: "#496B5A",
   secondary_color: "#8FAF9B",
   accent_color: "#C8A96A",
@@ -260,12 +262,19 @@ export default function WebsiteOnboardingPage() {
 
 function WebsiteWizard({ initial }) {
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const updateAuthAgency = useAuthStore((state) => state.updateAgency);
   const localKey = `nexora-website-draft-${initial.id}`;
   const local = readLocal(localKey);
+  const requestedStep = Number(searchParams.get("step"));
   const [step, setStep] = useState(
     Math.min(
-      Math.max(local?.step || initial.website_onboarding_step || 1, 1),
+      Math.max(
+        (Number.isInteger(requestedStep) && requestedStep >= 1 && requestedStep <= STEPS.length)
+          ? requestedStep
+          : (local?.step || initial.website_onboarding_step || 1),
+        1,
+      ),
       STEPS.length,
     ),
   );
@@ -373,26 +382,10 @@ function WebsiteWizard({ initial }) {
   const config = form.website_draft_config;
   const payload = useMemo(
     () => ({
-      name: form.name,
-      about: config.about,
-      email: config.public_email,
-      phone: config.public_phone,
-      address: config.address,
-      business_hours: config.business_hours,
-      primary_color: config.primary_color,
-      seo_title: config.seo_title,
-      seo_description: config.seo_description,
-      facebook_url: config.facebook_url,
-      instagram_url: config.instagram_url,
-      linkedin_url: config.linkedin_url,
-      youtube_url: config.youtube_url,
-      tiktok_url: config.tiktok_url,
-      whatsapp_number: config.whatsapp_number,
-      viber_number: config.viber_number,
       website_onboarding_step: step,
       website_draft_config: config,
     }),
-    [form.name, config, step],
+    [config, step],
   );
   const previewPayload = useMemo(
     () => buildPreviewPayload(form, serverState, localMedia),
@@ -422,12 +415,6 @@ function WebsiteWizard({ initial }) {
     return () => window.removeEventListener("beforeunload", warnBeforeLeaving);
   }, [dirty, saveMutation.isPending]);
 
-  function change(field, value) {
-    editRevisionRef.current += 1;
-    setForm((current) => ({ ...current, [field]: value }));
-    setDirty(true);
-    setSaveState("saving");
-  }
   function changeConfig(field, value) {
     editRevisionRef.current += 1;
     setForm((current) => ({
@@ -436,6 +423,38 @@ function WebsiteWizard({ initial }) {
     }));
     setDirty(true);
     setSaveState("saving");
+  }
+  function copyOrganizationDetails() {
+    const defaults = {
+      display_name: serverState.name,
+      about: serverState.about,
+      public_email: serverState.email,
+      public_phone: serverState.phone,
+      address: serverState.address,
+      business_hours: serverState.business_hours,
+      primary_color: serverState.primary_color,
+      seo_title: serverState.seo_title,
+      seo_description: serverState.seo_description,
+      facebook_url: serverState.facebook_url,
+      instagram_url: serverState.instagram_url,
+      linkedin_url: serverState.linkedin_url,
+      youtube_url: serverState.youtube_url,
+      tiktok_url: serverState.tiktok_url,
+      whatsapp_number: serverState.whatsapp_number,
+      viber_number: serverState.viber_number,
+      language: serverState.default_language,
+    };
+    const available = Object.fromEntries(
+      Object.entries(defaults).filter(([, value]) => value !== null && value !== undefined && value !== ""),
+    );
+    editRevisionRef.current += 1;
+    setForm((current) => ({
+      ...current,
+      website_draft_config: { ...current.website_draft_config, ...available },
+    }));
+    setDirty(true);
+    setSaveState("saving");
+    toast.success("Organization details copied into the website draft.");
   }
   async function save(target = step) {
     clearTimeout(timer.current);
@@ -510,10 +529,10 @@ function WebsiteWizard({ initial }) {
       <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#496B5A]">
-            Website creator
+            Website Studio
           </p>
           <h1 className="mt-1 text-3xl font-bold text-[#263238]">
-            Design your agency website
+            Manage your agency website
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#637079]">
             Edit on the left and see the real website immediately. Changes stay
@@ -581,8 +600,8 @@ function WebsiteWizard({ initial }) {
             <WebsiteEditorStep
               step={step}
               form={form}
-              change={change}
               changeConfig={changeConfig}
+              copyOrganizationDetails={copyOrganizationDetails}
               applyServer={applyServer}
               serverState={serverState}
               missing={missing}
@@ -722,8 +741,8 @@ function WebsiteEditorStep(props) {
   const {
     step,
     form,
-    change,
     changeConfig,
+    copyOrganizationDetails,
     applyServer,
     serverState,
     missing,
@@ -736,11 +755,16 @@ function WebsiteEditorStep(props) {
   if (step === 1)
     return (
       <div className="space-y-4">
+        <div className="flex flex-col gap-3 rounded-xl border border-[#DDE5E3] bg-[#F8FAFA] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div><p className="text-sm font-semibold text-[#263238]">Use organization defaults</p><p className="mt-1 text-xs leading-5 text-[#637079]">Copy the current organization profile, contact details, legacy SEO and social links into this private draft. Existing matching draft fields will be replaced.</p></div>
+          <Button type="button" size="sm" variant="outlined" onClick={copyOrganizationDetails}>Copy details</Button>
+        </div>
         <Input
-          label="Agency name"
-          value={form.name || ""}
-          onChange={(e) => change("name", e.target.value)}
-          required
+          label="Website display name"
+          value={c.display_name || ""}
+          onChange={(e) => changeConfig("display_name", e.target.value)}
+          placeholder={form.name || "Agency name"}
+          hint={`Organization name: ${form.name || "Not configured"}`}
         />
         <Textarea
           label="Agency description"
@@ -1722,7 +1746,7 @@ function buildPreviewPayload(form, serverState, localMedia) {
   return {
     agency: {
       id: form.id,
-      name: form.name,
+      name: websiteConfig.display_name || form.name,
       slug: form.slug,
       license_number: form.license_number,
       website_config: websiteConfig,

@@ -18,7 +18,6 @@ const VerifyLoginOTPPage= lazy(() => import('@/pages/auth/VerifyLoginOTPPage'))
 const ResetPasswordPage = lazy(() => import('@/pages/auth/ResetPasswordPage'))
 const PaymentRequiredPage = lazy(() => import('@/pages/auth/PaymentRequiredPage'))
 const WebsiteOnboardingPage = lazy(() => import('@/pages/website/WebsiteOnboardingPage'))
-const WebsiteContentPage = lazy(() => import('@/pages/website/WebsiteContentPage'))
 
 // App
 const DashboardPage     = lazy(() => import('@/pages/dashboard/DashboardPage'))
@@ -192,8 +191,8 @@ export const router = createBrowserRouter([
         handle: { title: 'Social Media' },
         lazy: () => import('@/pages/social-media/SocialMediaPage').then((m) => ({ Component: m.default })),
       },
-      { path: 'website-content', handle: { title: 'Website Content' }, element: <RequireAuth roles={['agency_owner', 'agency_manager']}>{S(WebsiteContentPage)}</RequireAuth> },
-      { path: 'onboarding/website', handle: { title: 'Website Creator' }, element: <RequireAuth roles={['agency_owner', 'agency_manager']}>{S(WebsiteOnboardingPage)}</RequireAuth> },
+      { path: 'website-content', handle: { title: 'Website Studio' }, element: <RequireAuth roles={['agency_owner', 'agency_manager']}><Navigate to="/onboarding/website?step=6" replace /></RequireAuth> },
+      { path: 'onboarding/website', handle: { title: 'Website Studio' }, element: <RequireAuth roles={['agency_owner', 'agency_manager']}>{S(WebsiteOnboardingPage)}</RequireAuth> },
       { path: 'website-submissions', handle: { title: 'Website Submissions' }, lazy: () => import('@/pages/website/WebsiteSubmissionsPage').then((m) => ({ Component: m.default })) },
       { path: 'agent-reviews', handle: { title: 'Agent Reviews' }, lazy: () => import('@/pages/website/AgentReviewsPage').then((m) => ({ Component: m.default })) },
       // ── Settings ───────────────────────────────────────────
