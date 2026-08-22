@@ -3,7 +3,7 @@ import {
   Search, CalendarCheck, MapPin, User, Building2,
   Calendar, Clock, SlidersHorizontal, X, Plus,
   Phone, FileText,
-  CheckCircle2, Pencil, Trash2,
+  CheckCircle2, Pencil, RefreshCw, Trash2,
 } from 'lucide-react'
 import {
   useSiteVisits,
@@ -46,7 +46,7 @@ export default function SiteVisitsPage() {
     ...(search.trim() ? { search: search.trim() } : {}),
   }), [filters, search])
 
-  const { data: visits = [], isLoading, isError } = useSiteVisits(queryParams)
+  const { data: visits = [], isLoading, isError, isFetching, refetch } = useSiteVisits(queryParams)
   const { data: agents = [] } = useAgents()
 
   // ── Stats ─────────────────────────────────────────────────
@@ -54,6 +54,7 @@ export default function SiteVisitsPage() {
   const { data: allVisits = [] } = useSiteVisits({})
   const stats = useMemo(() => ({
     total:      allVisits.length,
+    requested:  allVisits.filter((v) => v.status === 'requested').length,
     scheduled:  allVisits.filter((v) => v.status === 'scheduled').length,
     completed:  allVisits.filter((v) => v.status === 'completed').length,
     no_show:    allVisits.filter((v) => v.status === 'no_show').length,
@@ -81,20 +82,32 @@ export default function SiteVisitsPage() {
             Track and manage property site visits for your leads
           </p>
         </div>
-        <Button
-          variant="primary"
-          size="md"
-          leftIcon={<Plus size={15} />}
-          onClick={() => setScheduleOpen(true)}
-        >
-          Schedule Visit
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outlined"
+            size="md"
+            leftIcon={<RefreshCw size={15} className={isFetching ? 'animate-spin' : ''} />}
+            onClick={() => refetch()}
+            disabled={isFetching}
+          >
+            Refresh
+          </Button>
+          <Button
+            variant="primary"
+            size="md"
+            leftIcon={<Plus size={15} />}
+            onClick={() => setScheduleOpen(true)}
+          >
+            Schedule Visit
+          </Button>
+        </div>
       </div>
 
       {/* ── Stats strip ─────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {[
           { label: 'Total Visits',  value: stats.total,     color: 'text-[#263238]' },
+          { label: 'Requested',     value: stats.requested, color: 'text-violet-600' },
           { label: 'Scheduled',     value: stats.scheduled, color: 'text-blue-600'  },
           { label: 'Completed',     value: stats.completed, color: 'text-[#496B5A]' },
           { label: 'No Show',       value: stats.no_show,   color: 'text-amber-500' },

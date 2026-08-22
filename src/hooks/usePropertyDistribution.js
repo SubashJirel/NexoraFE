@@ -68,7 +68,10 @@ export function useCreateDistributionSocialDraft(propertyId) {
       if (!publishNow) return draft
 
       try {
-        return await publishSocialPost(draft.id, [draft.platform])
+        return await publishSocialPost(
+          draft.id,
+          draft.target_platforms?.length ? draft.target_platforms : [draft.platform],
+        )
       } catch (error) {
         // Preserve this for actionable timeout messaging: the draft exists even
         // if the browser could not wait for Meta to finish publishing it.

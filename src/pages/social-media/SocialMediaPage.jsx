@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import toast from 'react-hot-toast'
 import {
   Link2, Link2Off, AlertCircle, Share2,
   CheckCircle2, RefreshCw, PenSquare,
@@ -8,6 +10,8 @@ import {
   useSocialConnections,
   useStartMetaConnection,
   useDisconnectSocialAccount,
+  useMetaConnectionSession,
+  useCompleteMetaConnectionSession,
 } from '@/hooks/useSocialConnections'
 import { useSocialPosts, usePublishSocialPost, useDeleteSocialPost } from '@/hooks/useCreateSocialPost'
 import { Card, CardBody } from '@/components/ui/Card'
@@ -15,6 +19,7 @@ import Button from '@/components/ui/Button'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { cn } from '@/lib/cn'
 import CreatePostModal from '@/components/social/CreatePostModal'
+import { useAuthStore } from '@/store/authStore'
 
 // ── Inline SVG brand icons ────────────────────────────────────
 function FacebookIcon({ size = 24, color = 'currentColor' }) {
@@ -32,6 +37,73 @@ function InstagramIcon({ size = 24, color = 'currentColor' }) {
       <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
       <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
     </svg>
+  )
+}
+
+function PageSelectionModal({ token, onComplete, onCancel }) {
+  const { data, isLoading, isError } = useMetaConnectionSession(token)
+  const { mutate: complete, isPending } = useCompleteMetaConnectionSession({
+    onSuccess: onComplete,
+  })
+  const [selected, setSelected] = useState([])
+
+  function toggle(pageId) {
+    setSelected((current) => (
+      current.includes(pageId)
+        ? current.filter((id) => id !== pageId)
+        : [...current, pageId]
+    ))
+  }
+
+  return (
+    <div className="fixed inset-0 z-[310] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative z-10 w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+        <h3 className="text-lg font-bold text-[#263238]">Choose Pages to connect</h3>
+        <p className="mt-2 text-sm text-[#637079]">
+          Only the Pages you select—and their linked Instagram professional accounts—will be available in Nexora.
+        </p>
+
+        {isLoading && <div className="py-10"><PageSpinner /></div>}
+        {isError && (
+          <div className="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            This Page-selection session expired or could not be loaded. Start the connection again.
+          </div>
+        )}
+        {!isLoading && !isError && (
+          <div className="mt-5 max-h-72 space-y-2 overflow-y-auto">
+            {data?.pages?.map((page) => (
+              <label key={page.id} className="flex cursor-pointer items-center gap-3 rounded-xl border border-[#DDE5E3] p-4 hover:bg-[#F8FAFA]">
+                <input
+                  type="checkbox"
+                  checked={selected.includes(page.id)}
+                  onChange={() => toggle(page.id)}
+                  className="h-4 w-4 accent-[#496B5A]"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-[#263238]">{page.name}</p>
+                  <p className="mt-0.5 text-xs text-[#637079]">
+                    Facebook Page{page.has_instagram ? ' · Linked Instagram account detected' : ''}
+                  </p>
+                </div>
+              </label>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-6 flex justify-end gap-3">
+          <Button variant="ghost" onClick={onCancel} disabled={isPending}>Cancel</Button>
+          <Button
+            variant="primary"
+            loading={isPending}
+            disabled={isLoading || isError || selected.length === 0}
+            onClick={() => complete({ token, pageIds: selected })}
+          >
+            Connect selected Pages
+          </Button>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -69,9 +141,10 @@ function DisconnectModal({ account, onConfirm, onCancel, isLoading }) {
 }
 
 // ── Platform card ─────────────────────────────────────────────
-function PlatformCard({ platform, icon: Icon, brandColor, description, connection, onConnect, onDisconnect, isConnecting, comingSoon }) {
-  const isConnected = connection?.status === 'connected'
-  const hasWarning = isConnected && connection?.webhook_subscription_status === 'failed'
+function PlatformCard({ platform, icon: Icon, brandColor, description, connections = [], onConnect, onDisconnect, isConnecting, canManage }) {
+  const activeConnections = connections.filter((connection) => connection.status === 'connected')
+  const isConnected = activeConnections.length > 0
+  const hasWarning = activeConnections.some((connection) => connection.webhook_subscription_status === 'failed')
 
   return (
     <Card className="overflow-hidden">
@@ -99,17 +172,11 @@ function PlatformCard({ platform, icon: Icon, brandColor, description, connectio
                   Connected
                 </span>
               )}
-              {comingSoon && !isConnected && (
-                <span className="inline-flex items-center rounded-full bg-[#EEF2F2] px-2 py-0.5 text-[11px] font-semibold text-[#637079]">
-                  Coming soon
-                </span>
-              )}
             </div>
 
             {isConnected ? (
               <p className="mt-0.5 text-sm text-[#637079] truncate">
-                {connection.name}
-                {connection.username ? ` · @${connection.username}` : ''}
+                {activeConnections.length} connected account{activeConnections.length === 1 ? '' : 's'}
               </p>
             ) : (
               <p className="mt-0.5 text-sm text-[#8b969d]">Not connected</p>
@@ -123,21 +190,27 @@ function PlatformCard({ platform, icon: Icon, brandColor, description, connectio
 
           {/* Connected details */}
           {isConnected && (
-            <div className="grid grid-cols-2 gap-3">
-              {connection.page_id && (
-                <div className="rounded-lg bg-[#F8FAFA] px-3 py-2 border border-[#DDE5E3]">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8b969d]">Page ID</p>
-                  <p className="mt-0.5 text-sm font-medium text-[#263238] truncate">{connection.page_id}</p>
+            <div className="space-y-2">
+              {activeConnections.map((connection) => (
+                <div key={connection.id} className="flex items-center gap-3 rounded-lg border border-[#DDE5E3] bg-[#F8FAFA] px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-[#263238]">{connection.name || platform}</p>
+                    <p className="truncate text-[11px] text-[#637079]">
+                      {connection.username ? `@${connection.username} · ` : ''}Page {connection.page_id}
+                    </p>
+                  </div>
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={() => onDisconnect(connection)}
+                      className="rounded-lg p-2 text-red-600 hover:bg-red-50"
+                      aria-label={`Disconnect ${connection.name || platform}`}
+                    >
+                      <Link2Off size={14} />
+                    </button>
+                  )}
                 </div>
-              )}
-              {connection.created_at && (
-                <div className="rounded-lg bg-[#F8FAFA] px-3 py-2 border border-[#DDE5E3]">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8b969d]">Connected</p>
-                  <p className="mt-0.5 text-sm font-medium text-[#263238]">
-                    {new Date(connection.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-              )}
+              ))}
             </div>
           )}
 
@@ -153,19 +226,8 @@ function PlatformCard({ platform, icon: Icon, brandColor, description, connectio
 
           {/* Actions */}
           <div className="flex gap-3 pt-1">
-            {comingSoon && !isConnected ? (
-              <Button variant="outline" size="sm" disabled>Coming Soon</Button>
-            ) : isConnected ? (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  leftIcon={<Link2Off size={14} />}
-                  onClick={() => onDisconnect(connection)}
-                  className="text-red-600 border-red-200 hover:bg-red-50"
-                >
-                  Disconnect
-                </Button>
+            {canManage ? (
+              isConnected ? (
                 <Button
                   variant="outline"
                   size="sm"
@@ -173,10 +235,9 @@ function PlatformCard({ platform, icon: Icon, brandColor, description, connectio
                   onClick={onConnect}
                   isLoading={isConnecting}
                 >
-                  Reconnect
+                  Connect another Page
                 </Button>
-              </>
-            ) : (
+              ) : (
               <Button
                 variant="primary"
                 size="sm"
@@ -186,6 +247,9 @@ function PlatformCard({ platform, icon: Icon, brandColor, description, connectio
               >
                 Connect {platform.charAt(0).toUpperCase() + platform.slice(1)}
               </Button>
+              )
+            ) : (
+              <p className="text-xs text-[#637079]">Only an agency owner or manager can change connections.</p>
             )}
           </div>
         </div>
@@ -226,11 +290,23 @@ function HowItWorks() {
 
 // ── Publish confirmation modal ────────────────────────────────
 
-function PublishModal({ post, onConfirm, onCancel, isLoading }) {
-  // Derive available platforms from the post's platform field.
-  // The API accepts an array; we pre-select the post's own platform.
-  const available = post?.platform ? [post.platform] : []
-  const [selected, setSelected] = useState(available)
+function PublishModal({ post, connections, onConfirm, onCancel, isLoading }) {
+  const primaryAccount = connections.find((account) => account.id === post?.social_account)
+  const linkedPlatforms = connections
+    .filter((account) => (
+      account.status === 'connected' &&
+      primaryAccount?.page_id &&
+      account.page_id === primaryAccount.page_id
+    ))
+    .map((account) => account.platform)
+  const available = [...new Set([
+    ...linkedPlatforms,
+    ...(post?.target_platforms || []),
+    ...(post?.platform ? [post.platform] : []),
+  ])]
+  const [selected, setSelected] = useState(
+    post?.target_platforms?.length ? post.target_platforms : available
+  )
 
   function toggle(p) {
     setSelected((prev) =>
@@ -314,7 +390,7 @@ function DeletePostModal({ post, onConfirm, onCancel, isLoading }) {
         </div>
         <h3 className="text-lg font-bold text-[#263238]">Delete Post</h3>
         <p className="mt-2 text-sm text-[#637079]">
-          Are you sure you want to delete this post? This only removes it from your CRM — it won't affect anything already published on social media.
+          Are you sure you want to delete this post? If it was published through Nexora, the system will also attempt to delete it from Meta before removing the CRM record.
         </p>
         {post?.caption && (
           <p className="mt-3 rounded-lg border border-[#DDE5E3] bg-[#F8FAFA] px-3 py-2 text-xs text-[#637079] line-clamp-2 leading-relaxed italic">
@@ -345,23 +421,32 @@ const STATUS_STYLES = {
   draft:     'bg-[#EEF2F2] text-[#637079]',
   scheduled: 'bg-amber-50 text-amber-700',
   published: 'bg-green-100 text-green-700',
+  partial:   'bg-orange-50 text-orange-700',
   failed:    'bg-red-50 text-red-600',
 }
 
 function PostCard({ post, onPublish, isPublishing, onEdit, onDelete }) {
   const statusLabel = post.status?.charAt(0).toUpperCase() + post.status?.slice(1)
-  const canPublish = post.status === 'draft' || post.status === 'failed'
+  const canPublish = ['draft', 'failed', 'partial'].includes(post.status)
   const canEdit    = true
   const mediaCount = Array.isArray(post.media) && post.media.length > 0
     ? post.media.length
     : post.image ? 1 : 0
   const coverImage = post.media?.[0]?.image ?? post.image
+  const isReel = post.post_format === 'reel' || Boolean(post.video)
 
   return (
     <Card padding="none" className="overflow-hidden">
       <div className="flex">
         {/* image thumbnail */}
-        {coverImage ? (
+        {isReel && post.video ? (
+          <div className="relative shrink-0 w-20 h-28 overflow-hidden bg-black sm:w-24 sm:h-32">
+            <video src={post.video} muted playsInline preload="metadata" className="h-full w-full object-cover" />
+            <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/65 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+              Reel
+            </span>
+          </div>
+        ) : coverImage ? (
           <div className="relative shrink-0 w-20 h-auto sm:w-24">
             <img src={coverImage} alt="" className="w-full h-full object-cover" />
             {mediaCount > 1 && (
@@ -392,7 +477,7 @@ function PostCard({ post, onPublish, isPublishing, onEdit, onDelete }) {
 
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-3 text-[11px] text-[#8b969d] flex-wrap">
-              <span className="capitalize font-medium text-[#637079]">{post.platform}</span>
+              <span className="capitalize font-medium text-[#637079]">{isReel ? 'Reel' : post.platform}</span>
               {post.created_by_name && <span>by {post.created_by_name}</span>}
               <span>{new Date(post.created_at).toLocaleDateString()}</span>
               {post.scheduled_at && (
@@ -448,7 +533,7 @@ function PostCard({ post, onPublish, isPublishing, onEdit, onDelete }) {
           </div>
 
           {/* error message if failed */}
-          {post.status === 'failed' && post.error_message && (
+          {['failed', 'partial'].includes(post.status) && post.error_message && (
             <div className="flex gap-1.5 rounded-lg border border-red-100 bg-red-50 px-2.5 py-1.5">
               <AlertCircle size={12} className="mt-0.5 shrink-0 text-red-500" />
               <p className="text-[11px] text-red-600 leading-snug">{post.error_message}</p>
@@ -460,7 +545,7 @@ function PostCard({ post, onPublish, isPublishing, onEdit, onDelete }) {
   )
 }
 
-function PostsList() {
+function PostsList({ connections }) {
   const { data: posts = [], isLoading, isError, refetch } = useSocialPosts()
   const { mutate: publishPost, isPending: isPublishing, variables: publishingVars } = usePublishSocialPost()
   const { mutate: deletePost,  isPending: isDeleting }                               = useDeleteSocialPost()
@@ -513,6 +598,7 @@ function PostsList() {
       {publishTarget && (
         <PublishModal
           post={publishTarget}
+          connections={connections}
           onConfirm={(platforms) =>
             publishPost(
               { id: publishTarget.id, platforms },
@@ -529,6 +615,7 @@ function PostsList() {
         open={Boolean(editTarget)}
         onClose={() => setEditTarget(null)}
         post={editTarget}
+        connections={connections}
       />
 
       {/* delete confirmation modal */}
@@ -575,6 +662,9 @@ function Tabs({ active, onChange }) {
 
 // ── Main page ─────────────────────────────────────────────────
 export default function SocialMediaPage() {
+  const role = useAuthStore((state) => state.user?.role)
+  const canManageConnections = ['agency_owner', 'agency_manager'].includes(role)
+  const [searchParams, setSearchParams] = useSearchParams()
   const { data: connections = [], isLoading, isError, refetch } = useSocialConnections()
   const { mutate: startMeta, isPending: isConnecting } = useStartMetaConnection()
   const { mutate: disconnect, isPending: isDisconnecting } = useDisconnectSocialAccount()
@@ -583,10 +673,31 @@ export default function SocialMediaPage() {
   const [tab, setTab] = useState('connections')
   const [showCreatePost, setShowCreatePost] = useState(false)
 
-  const getConnection = (platform) =>
-    connections.find((c) => c.platform?.toLowerCase() === platform)
+  const getConnections = (platform) =>
+    connections.filter((c) => c.platform?.toLowerCase() === platform)
 
   const connectedAccounts = connections.filter((c) => c.status === 'connected')
+  const connectionSessionToken = searchParams.get('meta_connection') === 'select'
+    ? searchParams.get('connection_session')
+    : null
+
+  function clearConnectionResult() {
+    setSearchParams({}, { replace: true })
+  }
+
+  useEffect(() => {
+    if (searchParams.get('meta_connection') === 'error') {
+      const code = searchParams.get('error_code')
+      toast.error(
+        code === 'no_pages'
+          ? 'Meta did not return any Facebook Pages that you can manage.'
+          : 'The Meta connection was cancelled or could not be completed.'
+      )
+      clearConnectionResult()
+    }
+  // Search params are intentionally handled once after the OAuth redirect.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -658,20 +769,22 @@ export default function SocialMediaPage() {
                   icon={FacebookIcon}
                   brandColor="#1877F2"
                   description="Post property listings to your Facebook Page, respond to inquiries, and automatically capture conversations as leads."
-                  connection={getConnection('facebook')}
+                  connections={getConnections('facebook')}
                   onConnect={() => startMeta()}
                   onDisconnect={setDisconnectTarget}
                   isConnecting={isConnecting}
+                  canManage={canManageConnections}
                 />
                 <PlatformCard
                   platform="instagram"
                   icon={InstagramIcon}
                   brandColor="#E1306C"
                   description="Share property photos and stories. Connecting your Facebook Page will also link any attached Instagram Business account."
-                  connection={getConnection('instagram')}
+                  connections={getConnections('instagram')}
                   onConnect={() => startMeta()}
                   onDisconnect={setDisconnectTarget}
                   isConnecting={isConnecting}
+                  canManage={canManageConnections}
                 />
               </div>
             )}
@@ -681,8 +794,7 @@ export default function SocialMediaPage() {
           <div className="flex gap-3 rounded-xl border border-[#DDE5E3] bg-[#F8FAFA] px-5 py-4">
             <AlertCircle size={18} className="mt-0.5 shrink-0 text-[#496B5A]" />
             <p className="text-sm text-[#637079] leading-relaxed">
-              After connecting, Facebook redirects back to the server. Simply navigate back to this page
-              to see your connected accounts. You can revoke access at any time from your{' '}
+              After Meta authorization, Nexora asks which Facebook Pages you want to connect. Only agency owners and managers can change these connections. You can also revoke access from your{' '}
               <a
                 href="https://www.facebook.com/settings?tab=business_tools"
                 target="_blank"
@@ -729,7 +841,7 @@ export default function SocialMediaPage() {
               </CardBody>
             </Card>
           ) : (
-            <PostsList />
+            <PostsList connections={connectedAccounts} />
           )}
         </div>
       )}
@@ -750,6 +862,17 @@ export default function SocialMediaPage() {
         onClose={() => setShowCreatePost(false)}
         connections={connectedAccounts}
       />
+
+      {connectionSessionToken && (
+        <PageSelectionModal
+          token={connectionSessionToken}
+          onComplete={() => {
+            clearConnectionResult()
+            refetch()
+          }}
+          onCancel={clearConnectionResult}
+        />
+      )}
     </div>
   )
 }

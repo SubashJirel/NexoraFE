@@ -86,11 +86,81 @@ function SocialPublishing({ propertyId, links }) {
   const { data: connections = [] } = useSocialConnections()
   const mutation = useCreateDistributionSocialDraft(propertyId)
   const accounts = connections.filter((account) => account.status === 'connected' && ['facebook', 'instagram'].includes(account.platform))
-  const [form, setForm] = useState({ social_account: '', language: 'english', link: '' })
+  const [form, setForm] = useState({ social_account: '', language: 'english', link: '', platforms: [] })
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }))
   const selected = accounts.find((item) => String(item.id) === String(form.social_account))
-  const submit = (publishNow) => mutation.mutate({ ...form, social_account: Number(form.social_account), link: form.link ? Number(form.link) : null, publish_now: publishNow })
-  return <div className="rounded-xl border border-[#DDE5E3] p-4"><div><h4 className="text-sm font-semibold text-[#263238]">Facebook and Instagram</h4><p className="mt-0.5 text-xs text-[#637079]">Build a branded post draft or publish directly through a connected Meta account.</p></div>{accounts.length ? <><div className="mt-4 grid gap-3 sm:grid-cols-2"><Select label="Connected account" size="sm" value={form.social_account} onChange={(event) => set('social_account', event.target.value)}><option value="">Choose account</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name} ({account.platform})</option>)}</Select><Select label="Caption language" size="sm" value={form.language} onChange={(event) => set('language', event.target.value)}><option value="english">English</option><option value="nepali">नेपाली</option></Select><Select label="Tracked link" size="sm" value={form.link} onChange={(event) => set('link', event.target.value)}><option value="">Standard public link</option>{links.filter((link) => link.is_active).map((link) => <option key={link.id} value={link.id}>{link.label || link.source}</option>)}</Select><div className="flex items-end gap-2"><Button size="sm" variant="outlined" disabled={!selected} loading={mutation.isPending} onClick={() => submit(false)}>Create draft</Button><Button size="sm" disabled={!selected} loading={mutation.isPending} leftIcon={<Send size={13} />} onClick={() => submit(true)}>Publish now</Button></div></div>{selected?.platform === 'instagram' && <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-800">Instagram Story files are downloadable above. Meta direct publishing currently creates the Instagram feed post.</p>}</> : <div className="mt-4 rounded-lg bg-[#F8FAFA] p-4 text-center"><p className="text-sm font-medium text-[#263238]">No Meta account connected</p><p className="mt-1 text-xs text-[#637079]">Connect Facebook or Instagram from Social Media to publish directly.</p></div>}</div>
+  const availablePlatforms = selected
+    ? [...new Set(accounts
+        .filter((account) => account.page_id === selected.page_id)
+        .map((account) => account.platform))]
+    : []
+
+  function selectAccount(accountId) {
+    const account = accounts.find((item) => String(item.id) === String(accountId))
+    const platforms = account
+      ? [...new Set(accounts
+          .filter((item) => item.page_id === account.page_id)
+          .map((item) => item.platform))]
+      : []
+    setForm((current) => ({ ...current, social_account: accountId, platforms }))
+  }
+
+  function togglePlatform(platform) {
+    setForm((current) => ({
+      ...current,
+      platforms: current.platforms.includes(platform)
+        ? current.platforms.filter((item) => item !== platform)
+        : [...current.platforms, platform],
+    }))
+  }
+
+  function submit(publishNow) {
+    mutation.mutate({
+      ...form,
+      social_account: Number(form.social_account),
+      link: form.link ? Number(form.link) : null,
+      publish_now: publishNow,
+    })
+  }
+
+  return <div className="rounded-xl border border-[#DDE5E3] p-4">
+    <div>
+      <h4 className="text-sm font-semibold text-[#263238]">Facebook and Instagram</h4>
+      <p className="mt-0.5 text-xs text-[#637079]">Build one branded JPEG and publish it to either or both linked Meta accounts.</p>
+    </div>
+    {accounts.length ? <>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <Select label="Connected account" size="sm" value={form.social_account} onChange={(event) => selectAccount(event.target.value)}>
+          <option value="">Choose account</option>
+          {accounts.map((account) => <option key={account.id} value={account.id}>{account.name} ({account.platform})</option>)}
+        </Select>
+        <Select label="Caption language" size="sm" value={form.language} onChange={(event) => set('language', event.target.value)}>
+          <option value="english">English</option><option value="nepali">नेपाली</option>
+        </Select>
+        <Select label="Tracked link" size="sm" value={form.link} onChange={(event) => set('link', event.target.value)}>
+          <option value="">Standard public link</option>
+          {links.filter((link) => link.is_active).map((link) => <option key={link.id} value={link.id}>{link.label || link.source}</option>)}
+        </Select>
+        <div className="flex items-end gap-2">
+          <Button size="sm" variant="outlined" disabled={!selected || !form.platforms.length} loading={mutation.isPending} onClick={() => submit(false)}>Create draft</Button>
+          <Button size="sm" disabled={!selected || !form.platforms.length} loading={mutation.isPending} leftIcon={<Send size={13} />} onClick={() => submit(true)}>Publish now</Button>
+        </div>
+      </div>
+      {selected && <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-[#637079]">Publish to:</span>
+        {availablePlatforms.map((platform) => <button
+          key={platform}
+          type="button"
+          onClick={() => togglePlatform(platform)}
+          className={`rounded-full border px-3 py-1 text-xs font-semibold capitalize ${form.platforms.includes(platform) ? 'border-[#496B5A] bg-[#eef3f0] text-[#496B5A]' : 'border-[#DDE5E3] text-[#637079]'}`}
+        >{platform}</button>)}
+      </div>}
+      {form.platforms.includes('instagram') && <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-800">Instagram Story files remain downloadable above. Direct publishing creates an Instagram feed post using the same branded JPEG.</p>}
+    </> : <div className="mt-4 rounded-lg bg-[#F8FAFA] p-4 text-center">
+      <p className="text-sm font-medium text-[#263238]">No Meta account connected</p>
+      <p className="mt-1 text-xs text-[#637079]">Connect Facebook or Instagram from Social Media to publish directly.</p>
+    </div>}
+  </div>
 }
 
 function TrackedLinks({ propertyId, links }) {

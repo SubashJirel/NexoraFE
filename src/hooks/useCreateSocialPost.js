@@ -59,7 +59,11 @@ export function usePublishSocialPost({ onSuccess } = {}) {
     mutationFn: ({ id, platforms }) => publishSocialPost(id, platforms),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: SOCIAL_POSTS_KEY })
-      toast.success('Post published successfully!')
+      if (data.status === 'partial') {
+        toast.error(data.error_message || 'The post was published to only some selected platforms.')
+      } else {
+        toast.success('Post published successfully!')
+      }
       onSuccess?.(data)
     },
     onError: (err) => {

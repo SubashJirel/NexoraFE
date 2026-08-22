@@ -27,6 +27,19 @@ export async function deleteSocialConnection(id) {
   await apiClient.delete(`/social-posts/accounts/${id}/disconnect/`)
 }
 
+export async function getMetaConnectionSession(token) {
+  const { data } = await apiClient.get(`/social-posts/connections/meta/sessions/${token}/`)
+  return data
+}
+
+export async function completeMetaConnectionSession(token, pageIds) {
+  const { data } = await apiClient.post(
+    `/social-posts/connections/meta/sessions/${token}/`,
+    { page_ids: pageIds },
+  )
+  return data
+}
+
 /**
  * POST /api/social-posts/posts/
  * Create a new social post (draft or scheduled).
@@ -50,8 +63,11 @@ export async function createSocialPost(payload) {
   form.append('platform', payload.platform)
   form.append('caption', payload.caption)
   form.append('status', payload.status ?? 'draft')
+  form.append('post_format', payload.post_format ?? 'image')
+  payload.target_platforms?.forEach((platform) => form.append('target_platforms', platform))
 
   payload.images?.forEach((image) => form.append('images', image))
+  if (payload.video) form.append('video', payload.video)
   if (payload.media_order !== undefined) {
     form.append('media_order', JSON.stringify(payload.media_order))
   }
@@ -64,6 +80,7 @@ export async function createSocialPost(payload) {
 
   const { data } = await apiClient.post('/social-posts/posts/', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 180000,
   })
 
   return data
@@ -91,7 +108,7 @@ export async function publishSocialPost(id, platforms) {
     { platforms },
     // Meta image publication can legitimately take longer than the default
     // API timeout, especially while Instagram processes its media container.
-    { timeout: 120000 },
+    { timeout: 180000 },
   )
   return data
 }
@@ -114,14 +131,18 @@ export async function updateSocialPost(id, payload) {
 
   if (payload.caption !== undefined) form.append('caption', payload.caption)
   if (payload.status  !== undefined) form.append('status',  payload.status)
+  if (payload.post_format !== undefined) form.append('post_format', payload.post_format)
+  payload.target_platforms?.forEach((platform) => form.append('target_platforms', platform))
   if (payload.scheduled_at !== undefined) form.append('scheduled_at', payload.scheduled_at ?? '')
   payload.images?.forEach((image) => form.append('images', image))
+  if (payload.video) form.append('video', payload.video)
   if (payload.media_order !== undefined) {
     form.append('media_order', JSON.stringify(payload.media_order))
   }
 
   const { data } = await apiClient.patch(`/social-posts/posts/${id}/`, form, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 180000,
   })
 
   return data
