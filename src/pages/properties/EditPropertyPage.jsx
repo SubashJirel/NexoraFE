@@ -4,6 +4,7 @@ import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useProperty } from '@/hooks/useProperties'
 import { useUpdateProperty } from '@/hooks/useUpdateProperty'
+import { useDeletePropertyMedia } from '@/hooks/useDeletePropertyMedia'
 import Button from '@/components/ui/Button'
 import { PageSpinner } from '@/components/ui/Spinner'
 
@@ -40,6 +41,16 @@ export default function EditPropertyPage() {
   const { mutate: updateProperty, isPending } = useUpdateProperty(id, {
     onSuccess: () => navigate(`/properties/${id}`),
   })
+  const deleteMedia = useDeletePropertyMedia(id)
+
+  function deleteExistingMedia(item) {
+    const description = item.media_type === 'video' || item.media_type === 'reel'
+      ? 'this saved video'
+      : 'this saved image'
+    if (window.confirm(`Delete ${description}? This removes it from the property immediately.`)) {
+      deleteMedia.mutate(item.id)
+    }
+  }
 
   function onChange(field, value) {
     setForm((current) => ({ ...(current ?? propertyToForm(property)), [field]: value }))
@@ -174,6 +185,8 @@ export default function EditPropertyPage() {
                   files={mediaFiles}
                   onChange={setMediaFiles}
                   existingMedia={property.media || []}
+                  onDeleteExisting={deleteExistingMedia}
+                  deletingExistingId={deleteMedia.isPending ? deleteMedia.variables : null}
                   form={form}
                   onFormChange={onChange}
                 />

@@ -21,6 +21,18 @@ export default function Step6Publish({ form, errors, onChange }) {
 
   // The agent selected in the form (used in the summary card)
   const selectedAgent = agents.find((a) => a.id === form.assigned_agent)
+  const publishableStatuses = new Set(['available', 'reserved', 'under_negotiation'])
+
+  function changeStatus(status) {
+    onChange('status', status)
+    onChange('is_published', publishableStatuses.has(status))
+  }
+
+  function changePublication(published) {
+    onChange('is_published', published)
+    if (published && !publishableStatuses.has(form.status)) onChange('status', 'available')
+    if (!published && publishableStatuses.has(form.status)) onChange('status', 'draft')
+  }
 
   return (
     <div className="space-y-5">
@@ -91,7 +103,7 @@ export default function Step6Publish({ form, errors, onChange }) {
       <Select
         label="Property Status"
         value={form.status}
-        onChange={(e) => onChange('status', e.target.value)}
+        onChange={(e) => changeStatus(e.target.value)}
         error={errors.status}
       >
         {STATUS_OPTIONS.map((s) => (
@@ -104,9 +116,9 @@ export default function Step6Publish({ form, errors, onChange }) {
       <div className="grid grid-cols-2 gap-4">
         <Toggle
           label="Publish to Website"
-          hint="Sets is_published = true"
+          hint="Published listings use Available status"
           checked={form.is_published}
-          onChange={(v) => onChange('is_published', v)}
+          onChange={changePublication}
         />
         <Toggle
           label="Featured Listing"

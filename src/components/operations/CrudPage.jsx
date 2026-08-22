@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Edit3, Plus, Search, Trash2, X } from 'lucide-react'
+import { Edit3, ExternalLink, FileText, Plus, Search, Trash2, Upload, X } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
@@ -142,6 +142,68 @@ function Field({ field, value, onChange, localization }) {
   if (field.type === 'select') return <Select className={className} label={localization.t(field.label)} value={value} onChange={(event) => onChange(event.target.value)} required={field.required}><option value="">{localization.t('Select')}…</option>{(field.options || []).map((option) => { const item = typeof option === 'string' ? { value: option, label: option.replaceAll('_', ' ') } : option; return <option key={item.value} value={item.value}>{localization.t(item.label, item.label)}</option> })}</Select>
   if (field.type === 'multiselect') return <label className={`text-xs font-medium text-[#4f5c64] ${className}`}>{localization.t(field.label)}<select multiple className="mt-1 min-h-28 w-full rounded-lg border border-[#DDE5E3] p-2 text-sm" value={Array.isArray(value) ? value.map(String) : []} onChange={(event) => onChange([...event.target.selectedOptions].map((option) => Number(option.value)))}>{(field.options || []).map((option) => <option key={option.value} value={option.value}>{localization.t(option.label, option.label)}</option>)}</select></label>
   if (field.type === 'checkbox') return <label className={`flex items-center gap-2 pt-7 text-sm text-[#263238] ${className}`}><input type="checkbox" checked={Boolean(value)} onChange={(event) => onChange(event.target.checked)} />{localization.t(field.label)}</label>
-  if (field.type === 'file') return <label className={`text-xs font-medium text-[#4f5c64] ${className}`}>{localization.t(field.label)}<input className="mt-1 block w-full rounded-lg border border-[#DDE5E3] p-2 text-sm" type="file" onChange={(event) => onChange(event.target.files?.[0])} required={field.required && !value} /></label>
+  if (field.type === 'file') return <FileField field={field} value={value} onChange={onChange} localization={localization} className={className} />
   return <Input className={className} label={localization.t(field.label)} type={field.type === 'tags' ? 'text' : (field.type || 'text')} value={value} onChange={(event) => onChange(event.target.value)} required={field.required} min={field.min} step={field.step} placeholder={field.placeholder ? localization.t(field.placeholder, field.placeholder) : undefined} />
+}
+
+function FileField({ field, value, onChange, localization, className }) {
+  const objectUrl = useMemo(() => value instanceof File ? URL.createObjectURL(value) : '', [value])
+  useEffect(() => () => { if (objectUrl) URL.revokeObjectURL(objectUrl) }, [objectUrl])
+
+  const previewUrl = objectUrl || (typeof value === 'string' ? value : '')
+  const fileName = value instanceof File ? value.name : fileNameFromUrl(value)
+  const type = value instanceof File ? value.type : fileTypeFromName(fileName)
+  const isImage = type.startsWith('image/')
+  const isPdf = type === 'application/pdf'
+
+  return (
+    <div className={`text-xs font-medium text-[#4f5c64] ${className}`}>
+      <span>{localization.t(field.label)}</span>
+      {value && (
+        <div className="mt-1.5 flex min-h-16 items-center gap-3 rounded-lg border border-[#DDE5E3] bg-[#F8FAFA] p-2.5">
+          {isImage && previewUrl ? (
+            <img src={previewUrl} alt="Selected document preview" className="h-12 w-12 shrink-0 rounded-md border border-[#DDE5E3] object-cover" />
+          ) : (
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-white text-[#496B5A] ring-1 ring-[#DDE5E3]">
+              <FileText size={isPdf ? 23 : 22} />
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-[#263238]" title={fileName}>{fileName || 'Current file'}</p>
+            <p className="mt-0.5 text-[11px] font-normal text-[#8b969d]">{value instanceof File ? 'New file selected' : 'Currently saved file'}</p>
+          </div>
+          {previewUrl && (
+            <a href={previewUrl} target="_blank" rel="noreferrer" title="Open preview" aria-label={`Open ${fileName || 'file'}`} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#496B5A] hover:bg-[#eef3f0]">
+              <ExternalLink size={15} />
+            </a>
+          )}
+        </div>
+      )}
+      <label className="mt-2 flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-[#B8C9C5] bg-white px-3 text-sm font-semibold text-[#496B5A] transition hover:border-[#496B5A] hover:bg-[#eef3f0]">
+        <Upload size={15} />
+        {value ? 'Replace file' : 'Choose file'}
+        <input
+          className="sr-only"
+          type="file"
+          accept={field.accept}
+          onChange={(event) => onChange(event.target.files?.[0] || value)}
+          required={field.required && !value}
+        />
+      </label>
+      {field.hint && <p className="mt-1.5 text-[11px] font-normal text-[#8b969d]">{field.hint}</p>}
+    </div>
+  )
+}
+
+function fileNameFromUrl(value) {
+  if (!value || typeof value !== 'string') return ''
+  const raw = value.split('?')[0].split('#')[0].split('/').pop() || ''
+  try { return decodeURIComponent(raw) } catch { return raw }
+}
+
+function fileTypeFromName(name = '') {
+  const extension = name.split('.').pop()?.toLowerCase()
+  if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(extension)) return `image/${extension === 'jpg' ? 'jpeg' : extension}`
+  if (extension === 'pdf') return 'application/pdf'
+  return 'application/octet-stream'
 }

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Plus, Search, UserX, Mail, Shield, MoreVertical, Pencil, Trash2, UserCheck } from 'lucide-react'
+import { Plus, Search, UserX, Mail, Shield, MoreVertical, Pencil, Trash2, UserCheck, Eye, EyeOff } from 'lucide-react'
 import { useAgents } from '@/hooks/useAgents'
 import { useCreateAgent } from '@/hooks/useCreateAgent'
 import { useUpdateAgent } from '@/hooks/useUpdateAgent'
@@ -254,6 +254,7 @@ function AgentFormModal({ title, agent, onClose }) {
     password:  '',
   })
   const [errors, setErrors] = useState({})
+  const [showPassword, setShowPassword] = useState(false)
 
   const createMutation = useCreateAgent({ onSuccess: onClose })
   const updateMutation = useUpdateAgent(agent?.id, { onSuccess: onClose })
@@ -281,13 +282,13 @@ function AgentFormModal({ title, agent, onClose }) {
 
     if (isEdit) {
       // Only send password if the user filled it in
-      const payload = { full_name: form.full_name, email: form.email }
+      const payload = { full_name: form.full_name.trim(), email: form.email.trim().toLowerCase() }
       if (form.password) payload.password = form.password
       updateMutation.mutate(payload)
     } else {
       createMutation.mutate({
-        full_name: form.full_name,
-        email:     form.email,
+        full_name: form.full_name.trim(),
+        email:     form.email.trim().toLowerCase(),
         password:  form.password,
       })
     }
@@ -342,12 +343,24 @@ function AgentFormModal({ title, agent, onClose }) {
             />
             <Input
               label={isEdit ? 'New Password (leave blank to keep current)' : 'Password'}
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               placeholder={isEdit ? '••••••••' : 'At least 8 characters'}
               value={form.password}
               onChange={(e) => handleChange('password', e.target.value)}
               error={errors.password}
               disabled={isPending}
+              autoComplete="new-password"
+              rightAddon={
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((current) => !current)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                  className="text-[#8b969d] transition-colors hover:text-[#496B5A]"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              }
             />
           </div>
 

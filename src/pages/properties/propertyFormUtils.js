@@ -115,7 +115,6 @@ export function buildPropertyPayload(form) {
     withdrawal_reason: form.withdrawal_reason?.trim() || '',
     is_published: ['available', 'reserved', 'under_negotiation'].includes(status),
     is_featured: form.is_featured,
-    published_at: ['available', 'reserved', 'under_negotiation'].includes(status) ? new Date().toISOString() : null,
     assigned_agent: form.assigned_agent ?? null,
   }
 }

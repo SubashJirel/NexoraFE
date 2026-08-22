@@ -24,9 +24,13 @@ export default function Step5Description({ form, errors, onChange, customFields 
           hint="Appears on listing cards and search results."
         />
       </div>
-      <div className="grid gap-4 border-t border-[#DDE5E3] pt-5 sm:grid-cols-2">
-        <Input label="SEO title" maxLength={70} value={form.seo_title || ''} onChange={(e) => onChange('seo_title', e.target.value)} hint="Recommended: 50–60 characters" />
-        <Input label="SEO description" maxLength={180} value={form.seo_description || ''} onChange={(e) => onChange('seo_description', e.target.value)} hint="Recommended: 140–160 characters" />
+      <div className="border-t border-[#DDE5E3] pt-5">
+        <p className="text-sm font-semibold text-[#263238]">Listing SEO</p>
+        <p className="mt-1 text-xs text-[#637079]">Control how this property appears in search-engine results.</p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <Input label="Meta Title" maxLength={70} value={form.seo_title || ''} onChange={(e) => onChange('seo_title', e.target.value)} error={errors.seo_title} placeholder="Property title for search results" hint="Recommended: 50–60 characters" />
+          <Input label="Meta Description" maxLength={180} value={form.seo_description || ''} onChange={(e) => onChange('seo_description', e.target.value)} error={errors.seo_description} placeholder="Short search-result description" hint="Recommended: 140–160 characters" />
+        </div>
       </div>
       {customFields.length > 0 && <div className="border-t border-[#DDE5E3] pt-5"><p className="mb-3 text-sm font-semibold text-[#263238]">Custom fields</p><div className="grid gap-4 sm:grid-cols-2">{customFields.map((field) => <CustomField key={field.key} field={field} value={form.custom_data?.[field.key]} onChange={(value) => onChange('custom_data', { ...(form.custom_data || {}), [field.key]: value })} />)}</div></div>}
 

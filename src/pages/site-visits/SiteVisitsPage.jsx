@@ -13,6 +13,8 @@ import {
   useDeleteSiteVisit,
 } from '@/hooks/useSiteVisits'
 import { useAgents } from '@/hooks/useAgents'
+import { useLeads } from '@/hooks/useLeads'
+import { useProperties } from '@/hooks/useProperties'
 import { useAuthStore } from '@/store/authStore'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
@@ -532,6 +534,8 @@ const EMPTY_FORM = {
 
 function ScheduleVisitModal({ onClose }) {
   const { data: agents = [] } = useAgents()
+  const { data: leads = [], isLoading: leadsLoading } = useLeads()
+  const { data: properties = [], isLoading: propertiesLoading } = useProperties({})
   const [form, setForm]     = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
 
@@ -544,8 +548,8 @@ function ScheduleVisitModal({ onClose }) {
 
   function validate() {
     const e = {}
-    if (!form.lead.toString().trim())         e.lead         = 'Lead ID is required.'
-    if (!form.property.toString().trim())     e.property     = 'Property ID is required.'
+    if (!form.lead.toString().trim())         e.lead         = 'Select a lead.'
+    if (!form.property.toString().trim())     e.property     = 'Select a property.'
     if (!form.scheduled_at)                   e.scheduled_at = 'Scheduled date & time is required.'
     return e
   }
@@ -604,25 +608,37 @@ function ScheduleVisitModal({ onClose }) {
             {/* Visit details */}
             <FormSection title="Visit Details">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input
-                  label="Lead ID *"
-                  type="number"
-                  placeholder="e.g. 12"
+                <Select
+                  label="Lead *"
                   value={form.lead}
                   onChange={(e) => set('lead', e.target.value)}
                   error={errors.lead}
-                  disabled={createMutation.isPending}
+                  disabled={createMutation.isPending || leadsLoading}
                   autoFocus
-                />
-                <Input
-                  label="Property ID *"
-                  type="number"
-                  placeholder="e.g. 5"
+                >
+                  <option value="">{leadsLoading ? 'Loading leads…' : 'Select a lead…'}</option>
+                  {leads.map((lead) => (
+                    <option key={lead.id} value={lead.id}>
+                      {lead.full_name || lead.email || lead.phone || `Lead #${lead.id}`}
+                      {lead.phone ? ` · ${lead.phone}` : ''}
+                    </option>
+                  ))}
+                </Select>
+                <Select
+                  label="Property *"
                   value={form.property}
                   onChange={(e) => set('property', e.target.value)}
                   error={errors.property}
-                  disabled={createMutation.isPending}
-                />
+                  disabled={createMutation.isPending || propertiesLoading}
+                >
+                  <option value="">{propertiesLoading ? 'Loading properties…' : 'Select a property…'}</option>
+                  {properties.map((property) => (
+                    <option key={property.id} value={property.id}>
+                      {property.title || `Property #${property.id}`}
+                      {property.city ? ` · ${property.city}` : ''}
+                    </option>
+                  ))}
+                </Select>
                 <div className="sm:col-span-2">
                   <Input
                     label="Scheduled At *"

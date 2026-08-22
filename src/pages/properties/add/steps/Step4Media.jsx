@@ -3,7 +3,16 @@ import { ChevronLeft, ChevronRight, CloudUpload, Film, Star, X } from 'lucide-re
 import { cn } from '@/lib/cn'
 import Input from '@/components/ui/Input'
 
-export default function Step4Media({ files, onChange, form, onFormChange, allowMediaUpload = true, existingMedia = [] }) {
+export default function Step4Media({
+  files,
+  onChange,
+  form,
+  onFormChange,
+  allowMediaUpload = true,
+  existingMedia = [],
+  onDeleteExisting,
+  deletingExistingId,
+}) {
   const inputRef = useRef(null)
   const [dragging, setDragging] = useState(false)
   const [mediaError, setMediaError] = useState('')
@@ -102,7 +111,7 @@ export default function Step4Media({ files, onChange, form, onFormChange, allowM
           </p>
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
             {existingMedia.map((item) => (
-              <div key={item.id} className="relative aspect-square overflow-hidden rounded-xl border border-[#DDE5E3] bg-[#EEF2F2]">
+              <div key={item.id} className="group relative aspect-square overflow-hidden rounded-xl border border-[#DDE5E3] bg-[#EEF2F2]">
                 {item.media_type === 'video' || item.media_type === 'reel' ? (
                   <video src={item.file || item.external_url} className="h-full w-full object-cover" muted playsInline preload="metadata" />
                 ) : (
@@ -118,10 +127,26 @@ export default function Step4Media({ files, onChange, form, onFormChange, allowM
                     <Film size={10} /> Video
                   </span>
                 )}
+                {onDeleteExisting && (
+                  <button
+                    type="button"
+                    onClick={() => onDeleteExisting(item)}
+                    disabled={String(deletingExistingId) === String(item.id)}
+                    title="Delete saved media"
+                    aria-label={`Delete ${item.title || 'saved media'}`}
+                    className="absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-red-500 opacity-100 shadow-sm transition hover:bg-red-50 disabled:cursor-wait disabled:opacity-60 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
+                  >
+                    {String(deletingExistingId) === String(item.id)
+                      ? <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-red-300 border-t-red-600" />
+                      : <X size={14} />}
+                  </button>
+                )}
               </div>
             ))}
           </div>
-          <p className="mt-2 text-xs text-[#8b969d]">Existing items remain unchanged; newly selected files are appended when you save.</p>
+          <p className="mt-2 text-xs text-[#8b969d]">
+            Delete saved items from their thumbnail. Newly selected files are appended when you save.
+          </p>
         </div>
       )}
 
