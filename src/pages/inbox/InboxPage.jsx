@@ -36,6 +36,10 @@ import LeadAutomationPanel from './LeadAutomationPanel'
 
 const STATUSES = ['open', 'pending', 'closed', 'spam']
 
+function contactLabel(contact) {
+  return contact?.display_label || contact?.display_name || (contact?.username ? `@${contact.username}` : 'Unknown contact')
+}
+
 export default function InboxPage() {
   const [mode, setMode] = useState('leads')
   return <div className="space-y-5">
@@ -118,10 +122,10 @@ function ConversationList({ conversations, activeId, onSelect, isLoading, isErro
             String(activeId) === String(conversation.id) && 'bg-[#eef3f0]'
           )}
         >
-          <Avatar alt={conversation.contact?.display_name || 'Contact'} src={conversation.contact?.profile_image_url} size="md" />
+          <Avatar alt={contactLabel(conversation.contact)} src={conversation.contact?.profile_image_url} size="md" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
-              <p className="truncate text-sm font-semibold text-[#263238]">{conversation.contact?.display_name || conversation.contact?.username || 'Unknown contact'}</p>
+              <p className="truncate text-sm font-semibold text-[#263238]">{contactLabel(conversation.contact)}</p>
               <span className="shrink-0 text-[10px] text-[#8b969d]">{formatRelative(conversation.last_message_at)}</span>
             </div>
             <p className="mt-1 truncate text-xs text-[#637079]">{conversation.last_message_preview || 'No messages yet'}</p>
@@ -166,13 +170,28 @@ function ConversationHeader({ conversation, onBack }) {
   return (
     <div className="flex items-center gap-3 border-b border-[#DDE5E3] p-4">
       <button onClick={onBack} className="rounded-lg p-2 text-[#637079] hover:bg-[#EEF2F2] lg:hidden" aria-label="Back"><ArrowLeft size={18} /></button>
-      <Avatar alt={conversation.contact?.display_name || 'Contact'} src={conversation.contact?.profile_image_url} size="md" />
+      <Avatar alt={contactLabel(conversation.contact)} src={conversation.contact?.profile_image_url} size="md" />
       <div className="min-w-0 flex-1">
-        <p className="truncate font-semibold text-[#263238]">{conversation.contact?.display_name || conversation.contact?.username || 'Unknown contact'}</p>
+        <div className="flex min-w-0 items-center gap-2">
+          <p className="truncate font-semibold text-[#263238]">{contactLabel(conversation.contact)}</p>
+          {conversation.contact?.profile_data?.is_verified_user && (
+            <span className="rounded-full bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-600">Verified</span>
+          )}
+        </div>
         <p className="text-xs text-[#637079]">
+          {conversation.contact?.username ? `@${conversation.contact.username} · ` : ''}
           {conversation.platform} · {conversation.account_name}
           {conversation.source_social_post ? ` · From social post #${conversation.source_social_post}` : ''}
         </p>
+        {conversation.contact?.profile_data?.follower_count != null && (
+          <p className="text-[10px] text-[#8b969d]">
+            {Number(conversation.contact.profile_data.follower_count).toLocaleString()} followers
+            {conversation.contact.profile_data.is_user_follow_business ? ' · Follows your account' : ''}
+          </p>
+        )}
+        {!conversation.contact?.profile_available && (
+          <p className="text-[10px] text-[#8b969d]">Meta has not shared this sender&apos;s public profile details.</p>
+        )}
       </div>
       <Badge variant={statusVariant(conversation.status)}>{conversation.status}</Badge>
     </div>
