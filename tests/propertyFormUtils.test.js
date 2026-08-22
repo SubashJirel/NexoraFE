@@ -22,7 +22,7 @@ test('published properties use the backend available status contract', () => {
   assert.equal(payload.title, 'Family Home')
   assert.equal(payload.status, 'available')
   assert.equal(payload.is_published, true)
-  assert.match(payload.published_at, /^\d{4}-\d{2}-\d{2}T/)
+  assert.equal('published_at' in payload, false)
 })
 
 test('draft properties are never marked as published', () => {
@@ -39,14 +39,14 @@ test('draft properties are never marked as published', () => {
 
   assert.equal(payload.status, 'draft')
   assert.equal(payload.is_published, false)
-  assert.equal(payload.published_at, null)
+  assert.equal('published_at' in payload, false)
 })
 
 test('reserved and under-negotiation properties remain public', () => {
   for (const status of ['reserved', 'under_negotiation']) {
     const payload = buildPropertyPayload({ ...INITIAL_FORM, status })
     assert.equal(payload.is_published, true)
-    assert.match(payload.published_at, /^\d{4}-\d{2}-\d{2}T/)
+    assert.equal('published_at' in payload, false)
   }
 })
 
@@ -70,9 +70,17 @@ test('API properties are safely normalised for editing', () => {
     property_type: 'land',
     bedrooms: null,
     assigned_agent: 12,
+    seo_title: 'Land for sale in Kathmandu',
+    seo_description: 'A serviced land parcel available in Kathmandu.',
   })
 
   assert.equal(form.property_type, 'land')
   assert.equal(form.bedrooms, 1)
   assert.equal(form.assigned_agent, 12)
+  assert.equal(form.seo_title, 'Land for sale in Kathmandu')
+  assert.equal(form.seo_description, 'A serviced land parcel available in Kathmandu.')
+
+  const payload = buildPropertyPayload(form)
+  assert.equal(payload.seo_title, 'Land for sale in Kathmandu')
+  assert.equal(payload.seo_description, 'A serviced land parcel available in Kathmandu.')
 })

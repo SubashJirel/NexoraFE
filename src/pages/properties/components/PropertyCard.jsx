@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MapPin, Bed, Bath, Maximize2, MoreVertical, Heart, Eye, PhoneCall, Layers } from 'lucide-react'
+import { MapPin, Bed, Bath, Maximize2, MoreVertical, Heart, Eye, PhoneCall, Layers, Globe2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/cn'
 import Avatar from '@/components/ui/Avatar'
@@ -7,6 +7,8 @@ import Badge from '@/components/ui/Badge'
 import { useDeleteProperty } from '@/hooks/useDeleteProperty'
 import { useLocalization } from '@/context/useLocalization'
 import { formatAddress } from '@/lib/localization'
+import { usePropertyPublication } from '@/hooks/usePropertyPublication'
+import { useAuthStore } from '@/store/authStore'
 
 // ── Status config ─────────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -32,6 +34,9 @@ export default function PropertyCard({ property, view = 'grid' }) {
   const [liked, setLiked] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const navigate = useNavigate()
+  const role = useAuthStore((state) => state.user?.role)
+  const canManagePublication = ['agency_owner', 'agency_manager'].includes(role)
+  const publication = usePropertyPublication(property)
   const { mutate: deleteProperty, isPending: isDeletingProperty } = useDeleteProperty(property.id, {
     onSuccess: () => setMenuOpen(false),
   })
@@ -43,7 +48,7 @@ export default function PropertyCard({ property, view = 'grid' }) {
   const isCommercial = property.property_type === 'commercial'
 
   if (view === 'list') {
-    return <PropertyListRow property={property} status={status} imageUrl={imageUrl} liked={liked} setLiked={setLiked} />
+    return <PropertyListRow property={property} status={status} imageUrl={imageUrl} liked={liked} setLiked={setLiked} canManagePublication={canManagePublication} publication={publication} />
   }
 
   return (
@@ -144,6 +149,8 @@ export default function PropertyCard({ property, view = 'grid' }) {
         {/* Divider */}
         <div className="h-px bg-[#DDE5E3]" />
 
+        {canManagePublication && <WebsitePublicationButton property={property} publication={publication} fullWidth />}
+
         {/* Agent + stats */}
         <div className="flex items-center gap-2">
           <Avatar
@@ -165,7 +172,7 @@ export default function PropertyCard({ property, view = 'grid' }) {
 }
 
 // ── List view row ─────────────────────────────────────────────
-function PropertyListRow({ property, status, imageUrl, liked, setLiked }) {
+function PropertyListRow({ property, status, imageUrl, liked, setLiked, canManagePublication, publication }) {
   const localization = useLocalization()
   const isCommercial = property.property_type === 'commercial'
 
@@ -211,6 +218,7 @@ function PropertyListRow({ property, status, imageUrl, liked, setLiked }) {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {canManagePublication && <WebsitePublicationButton property={property} publication={publication} />}
           <Avatar alt={property.assigned_agent?.full_name || 'Agent'} size="sm" />
           <button
             onClick={() => setLiked((v) => !v)}
@@ -221,6 +229,32 @@ function PropertyListRow({ property, status, imageUrl, liked, setLiked }) {
         </div>
       </div>
     </div>
+  )
+}
+
+function WebsitePublicationButton({ property, publication, fullWidth = false }) {
+  const published = Boolean(property.is_published)
+  const approvalRequired = !published && property.requires_republish_approval
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={published}
+      disabled={publication.isPending || approvalRequired}
+      title={approvalRequired ? 'Manager approval is required before this listing can be republished.' : undefined}
+      onClick={() => publication.mutate(!published)}
+      className={cn(
+        'inline-flex h-8 items-center justify-center gap-2 rounded-lg border px-3 text-xs font-semibold transition-colors',
+        fullWidth && 'w-full',
+        published
+          ? 'border-emerald-600 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+          : 'border-[#496B5A] bg-white text-[#496B5A] hover:bg-[#eef3f0]',
+        (publication.isPending || approvalRequired) && 'cursor-not-allowed opacity-50',
+      )}
+    >
+      <Globe2 size={13} className={publication.isPending ? 'animate-pulse' : ''} />
+      {publication.isPending ? 'Updating…' : published ? 'Live on Website' : 'Publish to Website'}
+    </button>
   )
 }
 

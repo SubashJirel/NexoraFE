@@ -66,6 +66,22 @@ export async function updateProperty(propertyId, payload) {
 }
 
 /**
+ * Publish or unpublish a listing without opening the full property editor.
+ * PATCH is intentional: only publication fields should change from the list.
+ */
+export async function updatePropertyPublication(propertyId, isPublished, currentStatus) {
+  const publishableStatuses = new Set(['available', 'reserved', 'under_negotiation'])
+  const status = isPublished
+    ? (publishableStatuses.has(currentStatus) ? currentStatus : 'available')
+    : 'draft'
+  const { data } = await apiClient.patch(`/properties/${propertyId}/`, {
+    is_published: isPublished,
+    status,
+  })
+  return data
+}
+
+/**
  * DELETE /api/properties/{propertyId}/
  * Removes a property record.
  *

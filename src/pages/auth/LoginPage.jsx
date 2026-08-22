@@ -36,9 +36,10 @@ export default function LoginPage() {
     }
     setErrors({})
     setLoading(true)
+    const normalizedEmail = form.email.trim().toLowerCase()
 
     try {
-      const data = await login({ email: form.email, password: form.password })
+      const data = await login({ email: normalizedEmail, password: form.password })
       // data: { message, access, refresh, user, agency }
       setAuth(data.user, data.access, data.refresh, data.agency)
       toast.success(data.message || 'Welcome back!')
@@ -49,7 +50,7 @@ export default function LoginPage() {
         navigate('/payment-required', {
           state: {
             agency: err.response.data.agency,
-            email: form.email,
+            email: normalizedEmail,
             paymentStatus: err.response.data.payment_status,
           },
         })

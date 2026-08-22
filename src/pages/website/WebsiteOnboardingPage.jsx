@@ -1058,17 +1058,16 @@ function WebsiteEditorStep(props) {
       <div className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2">
           {[
-            "facebook_url",
-            "instagram_url",
-            "linkedin_url",
-            "youtube_url",
-            "tiktok_url",
-          ].map((field) => (
+            ["facebook_url", "Facebook"],
+            ["instagram_url", "Instagram"],
+            ["linkedin_url", "LinkedIn"],
+            ["youtube_url", "YouTube"],
+            ["tiktok_url", "TikTok"],
+          ].map(([field, label]) => (
             <Input
               key={field}
               type="url"
-              label={field.replace("_url", "").replace("_", " ")}
-              className="capitalize"
+              label={label}
               value={c[field]}
               onChange={(e) => changeConfig(field, e.target.value)}
             />
