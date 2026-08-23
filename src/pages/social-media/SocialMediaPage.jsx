@@ -5,6 +5,7 @@ import {
   Link2, Link2Off, AlertCircle, Share2,
   CheckCircle2, RefreshCw, PenSquare,
   ImageIcon, Clock, FileEdit, Send, Pencil, Trash2,
+  MessageCircle,
 } from 'lucide-react'
 import {
   useSocialConnections,
@@ -36,6 +37,15 @@ function InstagramIcon({ size = 24, color = 'currentColor' }) {
       <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
       <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
       <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+    </svg>
+  )
+}
+
+function TikTokIcon({ size = 24, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 4v10.5a4.5 4.5 0 1 1-4-4.47" />
+      <path d="M15 4c.7 2.1 2.1 3.5 4 4" />
     </svg>
   )
 }
@@ -120,7 +130,7 @@ function DisconnectModal({ account, onConfirm, onCancel, isLoading }) {
         <p className="mt-2 text-sm text-[#637079]">
           Are you sure you want to disconnect{' '}
           <span className="font-semibold text-[#263238]">{account?.name || account?.platform}</span>?
-          You will stop receiving leads and won't be able to post from this account.
+          Nexora will stop receiving messages and using this account until it is reconnected.
         </p>
         <div className="mt-6 flex gap-3">
           <Button variant="outline" size="md" className="flex-1" onClick={onCancel} disabled={isLoading}>
@@ -141,9 +151,9 @@ function DisconnectModal({ account, onConfirm, onCancel, isLoading }) {
 }
 
 // ── Platform card ─────────────────────────────────────────────
-function PlatformCard({ platform, icon: Icon, brandColor, description, connections = [], onConnect, onDisconnect, isConnecting, canManage }) {
+function PlatformCard({ platform, icon: Icon, brandColor, description, connections = [], onConnect, onDisconnect, isConnecting, canManage, comingSoon = false }) {
   const activeConnections = connections.filter((connection) => connection.status === 'connected')
-  const isConnected = activeConnections.length > 0
+  const isConnected = !comingSoon && activeConnections.length > 0
   const hasWarning = activeConnections.some((connection) => connection.webhook_subscription_status === 'failed')
 
   return (
@@ -172,9 +182,16 @@ function PlatformCard({ platform, icon: Icon, brandColor, description, connectio
                   Connected
                 </span>
               )}
+              {comingSoon && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                  <Clock size={10} /> Coming soon
+                </span>
+              )}
             </div>
 
-            {isConnected ? (
+            {comingSoon ? (
+              <p className="mt-0.5 text-sm text-[#8b969d]">Integration in development</p>
+            ) : isConnected ? (
               <p className="mt-0.5 text-sm text-[#637079] truncate">
                 {activeConnections.length} connected account{activeConnections.length === 1 ? '' : 's'}
               </p>
@@ -196,7 +213,9 @@ function PlatformCard({ platform, icon: Icon, brandColor, description, connectio
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-[#263238]">{connection.name || platform}</p>
                     <p className="truncate text-[11px] text-[#637079]">
-                      {connection.username ? `@${connection.username} · ` : ''}Page {connection.page_id}
+                      {connection.platform === 'whatsapp'
+                        ? connection.display_phone_number || 'WhatsApp Business number'
+                        : <>{connection.username ? `@${connection.username} · ` : ''}Page {connection.page_id}</>}
                     </p>
                   </div>
                   {canManage && (
@@ -219,14 +238,18 @@ function PlatformCard({ platform, icon: Icon, brandColor, description, connectio
             <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
               <AlertCircle size={15} className="mt-0.5 shrink-0 text-amber-500" />
               <p className="text-xs text-amber-700 leading-relaxed">
-                Messaging webhooks could not be subscribed. Lead capture from conversations may not work until <strong>pages_messaging</strong> permission is granted.
+                Messaging webhooks could not be subscribed. Lead capture from conversations may not work until the required Meta messaging permissions are granted.
               </p>
             </div>
           )}
 
           {/* Actions */}
           <div className="flex gap-3 pt-1">
-            {canManage ? (
+            {comingSoon ? (
+              <Button variant="outline" size="sm" disabled leftIcon={<Clock size={14} />}>
+                Available soon
+              </Button>
+            ) : canManage ? (
               isConnected ? (
                 <Button
                   variant="outline"
@@ -235,7 +258,7 @@ function PlatformCard({ platform, icon: Icon, brandColor, description, connectio
                   onClick={onConnect}
                   isLoading={isConnecting}
                 >
-                  Connect another Page
+                  Connect another {platform === 'whatsapp' ? 'number' : 'Page'}
                 </Button>
               ) : (
               <Button
@@ -261,10 +284,10 @@ function PlatformCard({ platform, icon: Icon, brandColor, description, connectio
 // ── How it works ──────────────────────────────────────────────
 function HowItWorks() {
   const steps = [
-    { step: '1', title: 'Connect your account', desc: 'Click "Connect Facebook" to authenticate via Facebook\'s secure OAuth flow.' },
-    { step: '2', title: 'Select your Page', desc: 'Choose which Facebook Page (and linked Instagram) to link to your CRM.' },
-    { step: '3', title: 'Post from the CRM', desc: 'Create and publish property listings directly to your connected Pages.' },
-    { step: '4', title: 'Leads flow in automatically', desc: 'Conversations from your posts are captured as leads in the CRM.' },
+    { step: '1', title: 'Connect Meta channels', desc: 'Authorize Facebook and Instagram through Meta\'s secure connection flow.' },
+    { step: '2', title: 'Choose the right account', desc: 'Select the Facebook Pages and linked Instagram accounts this agency manages.' },
+    { step: '3', title: 'Publish and reply', desc: 'Post listings to Facebook and Instagram, and handle messages from the unified inbox.' },
+    { step: '4', title: 'Leads flow in automatically', desc: 'New channel conversations are captured and linked to CRM leads.' },
   ]
   return (
     <Card>
@@ -676,7 +699,9 @@ export default function SocialMediaPage() {
   const getConnections = (platform) =>
     connections.filter((c) => c.platform?.toLowerCase() === platform)
 
-  const connectedAccounts = connections.filter((c) => c.status === 'connected')
+  const connectedAccounts = connections.filter((c) => (
+    c.status === 'connected' && ['facebook', 'instagram'].includes(c.platform)
+  ))
   const connectionSessionToken = searchParams.get('meta_connection') === 'select'
     ? searchParams.get('connection_session')
     : null
@@ -785,6 +810,24 @@ export default function SocialMediaPage() {
                   onDisconnect={setDisconnectTarget}
                   isConnecting={isConnecting}
                   canManage={canManageConnections}
+                />
+                <PlatformCard
+                  platform="whatsapp"
+                  icon={MessageCircle}
+                  brandColor="#25D366"
+                  description="Bring WhatsApp Business conversations and customer inquiries into Nexora's unified inbox."
+                  connections={[]}
+                  canManage={canManageConnections}
+                  comingSoon
+                />
+                <PlatformCard
+                  platform="tiktok"
+                  icon={TikTokIcon}
+                  brandColor="#111111"
+                  description="Connect an authorized TikTok account and publish property reels from the same Nexora workflow."
+                  connections={[]}
+                  canManage={canManageConnections}
+                  comingSoon
                 />
               </div>
             )}

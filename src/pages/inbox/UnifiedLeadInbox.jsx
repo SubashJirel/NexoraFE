@@ -128,7 +128,7 @@ function StatusControl({ lead }) {
 
 function ActivityTab({ lead, data }) {
   const [showComposer, setShowComposer] = useState(false)
-  const automatedSocialNotes = /^(Inbound|Outbound) (facebook|instagram) message:/i
+  const automatedSocialNotes = /^(Inbound|Outbound) (facebook|instagram|whatsapp) message:/i
   const items = [
     ...data.interactions.filter((item) => !automatedSocialNotes.test(item.note || '')).map((item) => ({ id: `interaction-${item.id}`, date: item.created_at, channel: item.interaction_type, direction: item.direction, text: item.note, agent: item.agent_name })),
     ...data.social_messages.map((item) => ({ id: `message-${item.id}`, date: item.sent_at, channel: item.platform, direction: item.direction, text: item.text || `[${item.message_type}]` })),
