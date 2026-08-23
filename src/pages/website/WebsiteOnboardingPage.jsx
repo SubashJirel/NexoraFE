@@ -41,6 +41,7 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { useProperties } from "@/hooks/useProperties";
 import WebsiteLivePreview from "@/components/website-editor/WebsiteLivePreview";
+import LocationPicker from "@/components/maps/LocationPicker";
 
 const STEPS = [
   [
@@ -244,9 +245,11 @@ const REQUIRED = {
 };
 
 export default function WebsiteOnboardingPage() {
+  const agencyId = useAuthStore((state) => state.agency?.id);
   const query = useQuery({
-    queryKey: ["website-onboarding"],
+    queryKey: ["agency", agencyId, "website-onboarding"],
     queryFn: getWebsiteOnboarding,
+    enabled: Boolean(agencyId),
   });
   if (query.isLoading) return <PageSpinner />;
   if (query.isError)
@@ -262,6 +265,8 @@ export default function WebsiteOnboardingPage() {
 
 function WebsiteWizard({ initial }) {
   const queryClient = useQueryClient();
+  const onboardingQueryKey = ["agency", initial.id, "website-onboarding"];
+  const versionsQueryKey = ["agency", initial.id, "website-versions"];
   const [searchParams] = useSearchParams();
   const updateAuthAgency = useAuthStore((state) => state.updateAgency);
   const localKey = `nexora-website-draft-${initial.id}`;
@@ -300,7 +305,7 @@ function WebsiteWizard({ initial }) {
   const revisionRef = useRef(initial.website_draft_revision || 0);
   const editRevisionRef = useRef(0);
   const propertiesQuery = useProperties();
-  const versionsQuery = useQuery({ queryKey: ["website-versions"], queryFn: getWebsiteVersions });
+  const versionsQuery = useQuery({ queryKey: versionsQueryKey, queryFn: getWebsiteVersions });
   const eligibleProperties = useMemo(
     () => (propertiesQuery.data || []).filter((property) =>
       property.is_published &&
@@ -318,7 +323,7 @@ function WebsiteWizard({ initial }) {
       revisionRef.current = data.website_draft_revision;
       setConflict(null);
       setServerState(data);
-      queryClient.setQueryData(["website-onboarding"], data);
+      queryClient.setQueryData(onboardingQueryKey, data);
       if (variables.revision === editRevisionRef.current) {
         // The editor's local state is authoritative while it is open. Replacing
         // it with an API echo can erase typing made after the request started.
@@ -332,6 +337,7 @@ function WebsiteWizard({ initial }) {
       if (error.response?.status === 409) {
         setConflict(error.response.data);
         setSaveState("conflict");
+        toast.error("This website changed in another session. Reload the latest version before saving again.");
         return;
       }
       setSaveState("error");
@@ -349,7 +355,7 @@ function WebsiteWizard({ initial }) {
         is_website_published: true,
       });
       toast.success("Your agency website is live.");
-      queryClient.invalidateQueries({ queryKey: ["website-versions"] });
+      queryClient.invalidateQueries({ queryKey: versionsQueryKey });
     },
     onError: (error) =>
       toast.error(apiError(error, "The website could not be published.")),
@@ -372,8 +378,8 @@ function WebsiteWizard({ initial }) {
       setForm(normalizeForm(website));
       setDirty(false);
       setSaveState("saved");
-      queryClient.setQueryData(["website-onboarding"], website);
-      queryClient.invalidateQueries({ queryKey: ["website-versions"] });
+      queryClient.setQueryData(onboardingQueryKey, website);
+      queryClient.invalidateQueries({ queryKey: versionsQueryKey });
       toast.success("The selected version is live as a new published version.");
     },
     onError: (error) => toast.error(apiError(error, "Unable to restore this website version.")),
@@ -459,17 +465,25 @@ function WebsiteWizard({ initial }) {
   async function save(target = step) {
     clearTimeout(timer.current);
     setSaveState("saving");
-    await saveMutation.mutateAsync({
-      data: { ...payload, website_onboarding_step: target },
-      revision: editRevisionRef.current,
-    });
+    try {
+      await saveMutation.mutateAsync({
+        data: { ...payload, website_onboarding_step: target },
+        revision: editRevisionRef.current,
+      });
+      return true;
+    } catch {
+      // The mutation callbacks show the actionable error state. Handling the
+      // rejection here prevents button click handlers from emitting an
+      // unhandled Axios promise and stops navigation after a failed save.
+      return false;
+    }
   }
   async function go(target) {
-    if (dirty) await save(target);
+    if (dirty && !(await save(target))) return;
     setStep(target);
   }
   async function publish() {
-    if (dirty) await save(9);
+    if (dirty && !(await save(9))) return;
     publishMutation.mutate();
   }
   function applyServer(data, mediaKind) {
@@ -496,7 +510,7 @@ function WebsiteWizard({ initial }) {
       setForm(normalizeForm(data));
       setDirty(false);
     }
-    queryClient.setQueryData(["website-onboarding"], data);
+    queryClient.setQueryData(onboardingQueryKey, data);
   }
   async function reloadLatest() {
     const latest = conflict?.current || await getWebsiteOnboarding();
@@ -507,7 +521,7 @@ function WebsiteWizard({ initial }) {
     setDirty(false);
     setSaveState("saved");
     localStorage.removeItem(localKey);
-    queryClient.setQueryData(["website-onboarding"], latest);
+    queryClient.setQueryData(onboardingQueryKey, latest);
   }
   const previewSectionSelected = useCallback((section) => {
     const target = PREVIEW_SECTION_STEP[section];
@@ -613,6 +627,7 @@ function WebsiteWizard({ initial }) {
           </div>
           <div className="flex flex-col-reverse gap-2 border-t border-[#DDE5E3] px-5 py-3 sm:flex-row sm:justify-between">
             <Button
+              type="button"
               variant="outlined"
               leftIcon={<ArrowLeft size={15} />}
               onClick={() => go(Math.max(1, step - 1))}
@@ -622,11 +637,12 @@ function WebsiteWizard({ initial }) {
             </Button>
             <div className="flex flex-wrap gap-3">
               {saveState === "error" && (
-                <Button variant="outlined" onClick={() => save()}>
+                <Button type="button" variant="outlined" onClick={() => save()}>
                   Retry save
                 </Button>
               )}
               <Button
+                type="button"
                 variant="ghost"
                 onClick={() => save()}
                 loading={saveMutation.isPending}
@@ -635,6 +651,7 @@ function WebsiteWizard({ initial }) {
               </Button>
               {step < 9 ? (
                 <Button
+                  type="button"
                   rightIcon={<ArrowRight size={15} />}
                   onClick={() => go(step + 1)}
                   loading={saveMutation.isPending}
@@ -684,9 +701,15 @@ function WebsiteWizard({ initial }) {
 
 function DomainSettings() {
   const queryClient = useQueryClient();
+  const agencyId = useAuthStore((state) => state.agency?.id);
+  const domainsQueryKey = ["agency", agencyId, "website-domains"];
   const [domain, setDomain] = useState("");
-  const query = useQuery({ queryKey: ["website-domains"], queryFn: getWebsiteDomains });
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["website-domains"] });
+  const query = useQuery({
+    queryKey: domainsQueryKey,
+    queryFn: getWebsiteDomains,
+    enabled: Boolean(agencyId),
+  });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: domainsQueryKey });
   const claim = useMutation({
     mutationFn: claimWebsiteDomain,
     onSuccess: () => { setDomain(""); refresh(); toast.success("Domain claimed. Add the DNS records shown below."); },
@@ -884,19 +907,13 @@ function WebsiteEditorStep(props) {
           value={c.business_hours}
           onChange={(e) => changeConfig("business_hours", e.target.value)}
         />
-        <Input
-          label="Map latitude"
-          type="number"
-          value={c.map_latitude ?? ""}
-          onChange={(e) => changeConfig("map_latitude", e.target.value || null)}
-        />
-        <Input
-          label="Map longitude"
-          type="number"
-          value={c.map_longitude ?? ""}
-          onChange={(e) =>
-            changeConfig("map_longitude", e.target.value || null)
-          }
+        <LocationPicker
+          latitude={c.map_latitude}
+          longitude={c.map_longitude}
+          onChange={({ latitude, longitude }) => {
+            changeConfig("map_latitude", latitude);
+            changeConfig("map_longitude", longitude);
+          }}
         />
       </div>
     );

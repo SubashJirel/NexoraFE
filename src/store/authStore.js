@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { queryClient } from '@/lib/queryClient'
 
 /**
  * Auth store — persisted to localStorage.
@@ -35,6 +36,10 @@ export const useAuthStore = create(
        * @param {object} agency    - { id, name, license_number }
        */
       setAuth: (apiUser, access, refresh, agency) => {
+        // React Query lives longer than an authenticated session. Without
+        // clearing it here, a second agency signing in within the same SPA can
+        // briefly receive the previous agency's still-fresh cached records.
+        queryClient.clear()
         const user = {
           id: apiUser.id,
           email: apiUser.email,
@@ -68,6 +73,8 @@ export const useAuthStore = create(
       },
 
       clearAuth: () => {
+        // Tenant-owned API data must never survive logout or an expired session.
+        queryClient.clear()
         set({
           user: null,
           agency: null,
