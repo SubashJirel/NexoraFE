@@ -126,7 +126,7 @@ function SocialPublishing({ propertyId, links }) {
   return <div className="rounded-xl border border-[#DDE5E3] p-4">
     <div>
       <h4 className="text-sm font-semibold text-[#263238]">Facebook and Instagram</h4>
-      <p className="mt-0.5 text-xs text-[#637079]">Build one branded JPEG and publish it to either or both linked Meta accounts.</p>
+      <p className="mt-0.5 text-xs text-[#637079]">Publish one branded cover followed by up to four property photos to either or both linked Meta accounts.</p>
     </div>
     {accounts.length ? <>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">

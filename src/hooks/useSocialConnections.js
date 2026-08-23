@@ -5,6 +5,9 @@ import {
   deleteSocialConnection,
   getMetaConnectionSession,
   completeMetaConnectionSession,
+  completeWhatsAppConnection,
+  openWhatsAppEmbeddedSignup,
+  startWhatsAppConnection,
 } from '@/services/socialPostService'
 import toast from 'react-hot-toast'
 
@@ -88,6 +91,28 @@ export function useCompleteMetaConnectionSession({ onSuccess } = {}) {
       toast.error(
         err.response?.data?.detail ||
         'Could not connect the selected Meta Pages. Please try again.',
+      )
+    },
+  })
+}
+
+export function useConnectWhatsApp() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      const config = await startWhatsAppConnection()
+      const signupResult = await openWhatsAppEmbeddedSignup(config)
+      return completeWhatsAppConnection(signupResult)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: SOCIAL_CONNECTIONS_KEY })
+      toast.success('WhatsApp Business connected.')
+    },
+    onError: (err) => {
+      toast.error(
+        err.response?.data?.detail ||
+        err.message ||
+        'Failed to connect WhatsApp Business. Please try again.',
       )
     },
   })

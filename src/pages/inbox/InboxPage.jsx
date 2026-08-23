@@ -98,7 +98,7 @@ function InboxFilters({ filters, setFilters }) {
         />
       </div>
       <div className="grid grid-cols-3 gap-2">
-        <CompactSelect value={filters.platform} onChange={(value) => set('platform', value)} options={['facebook', 'instagram']} placeholder="Platform" />
+        <CompactSelect value={filters.platform} onChange={(value) => set('platform', value)} options={['facebook', 'instagram', 'whatsapp']} placeholder="Platform" />
         <CompactSelect value={filters.status} onChange={(value) => set('status', value)} options={STATUSES} placeholder="Status" />
         <CompactSelect value={filters.unread} onChange={(value) => set('unread', value)} options={['true']} labels={{ true: 'Unread' }} placeholder="All" />
       </div>
@@ -190,7 +190,11 @@ function ConversationHeader({ conversation, onBack }) {
           </p>
         )}
         {!conversation.contact?.profile_available && (
-          <p className="text-[10px] text-[#8b969d]">Meta has not shared this sender&apos;s public profile details.</p>
+          <p className="text-[10px] text-[#8b969d]">
+            {conversation.platform === 'whatsapp'
+              ? 'WhatsApp did not include a profile name for this sender.'
+              : 'Meta has not shared this sender\'s public profile details.'}
+          </p>
         )}
       </div>
       <Badge variant={statusVariant(conversation.status)}>{conversation.status}</Badge>
@@ -256,7 +260,7 @@ function ReplyComposer({ conversationId }) {
 function CreateLeadDialog({ conversation, onClose }) {
   const mutation = useCreateLeadFromConversation(conversation.id)
   const [form, setForm] = useState({
-    full_name: conversation.contact?.display_name || '', phone: '', email: '',
+    full_name: conversation.contact?.display_name || '', phone: conversation.contact?.phone || '', email: '',
   })
   const set = (field, value) => setForm((current) => ({ ...current, [field]: value }))
   function submit(event) {
@@ -282,7 +286,7 @@ function MessageBubble({ message }) {
     <div className={cn('flex', outbound ? 'justify-end' : 'justify-start')}>
       <div className={cn('max-w-[78%] rounded-2xl px-4 py-2.5 text-sm shadow-sm', outbound ? 'rounded-br-md bg-[#496B5A] text-white' : 'rounded-bl-md bg-white text-[#263238]')}>
         <p className="whitespace-pre-wrap">{message.text || `[${message.message_type}]`}</p>
-        {message.attachments?.length > 0 && <div className="mt-2 space-y-2">{message.attachments.map((attachment, index) => attachment.type === 'image' && attachment.url ? <a key={`${attachment.url}-${index}`} href={attachment.url} target="_blank" rel="noreferrer"><img src={attachment.url} alt={attachment.title || 'Message attachment'} className="max-h-60 rounded-lg object-cover" /></a> : <a key={`${attachment.url}-${index}`} href={attachment.url || '#'} target="_blank" rel="noreferrer" className="block rounded-lg bg-black/10 px-3 py-2 text-xs underline">{attachment.title || attachment.type || 'Attachment'}</a>)}</div>}
+        {message.attachments?.length > 0 && <div className="mt-2 space-y-2">{message.attachments.map((attachment, index) => attachment.type === 'image' && attachment.url ? <a key={`${attachment.url}-${index}`} href={attachment.url} target="_blank" rel="noreferrer"><img src={attachment.url} alt={attachment.title || 'Message attachment'} className="max-h-60 rounded-lg object-cover" /></a> : attachment.url ? <a key={`${attachment.url}-${index}`} href={attachment.url} target="_blank" rel="noreferrer" className="block rounded-lg bg-black/10 px-3 py-2 text-xs underline">{attachment.title || attachment.type || 'Attachment'}</a> : <div key={`${attachment.provider_media_id || attachment.type}-${index}`} className="rounded-lg bg-black/10 px-3 py-2 text-xs">{attachment.title || `${capitalize(attachment.type || 'file')} attachment`}</div>)}</div>}
         <div className={cn('mt-1 flex items-center justify-end gap-1 text-[9px]', outbound ? 'text-white/60' : 'text-[#8b969d]')}>
           {formatMessageTime(message.sent_at)}
           {outbound && <span>{message.delivery_status}</span>}

@@ -40,6 +40,125 @@ export async function completeMetaConnectionSession(token, pageIds) {
   return data
 }
 
+export async function startWhatsAppConnection() {
+  const { data } = await apiClient.get('/social-posts/connections/whatsapp/start/')
+  return data
+}
+
+export async function completeWhatsAppConnection(payload) {
+  const { data } = await apiClient.post(
+    '/social-posts/connections/whatsapp/complete/',
+    payload,
+  )
+  return data
+}
+
+let facebookSdkPromise
+
+function loadFacebookSdk(appId, graphVersion) {
+  if (!facebookSdkPromise) {
+    facebookSdkPromise = new Promise((resolve, reject) => {
+      const initialize = () => {
+        window.FB.init({
+          appId,
+          cookie: true,
+          xfbml: false,
+          version: graphVersion,
+        })
+        resolve(window.FB)
+      }
+      if (window.FB) {
+        initialize()
+        return
+      }
+      const existing = document.getElementById('facebook-jssdk')
+      window.fbAsyncInit = initialize
+      if (!existing) {
+        const script = document.createElement('script')
+        script.id = 'facebook-jssdk'
+        script.src = 'https://connect.facebook.net/en_US/sdk.js'
+        script.async = true
+        script.defer = true
+        script.onerror = () => reject(new Error('Could not load Meta Embedded Signup.'))
+        document.body.appendChild(script)
+      }
+    })
+  }
+  return facebookSdkPromise
+}
+
+export async function openWhatsAppEmbeddedSignup(config) {
+  const FB = await loadFacebookSdk(config.app_id, config.graph_version)
+  return new Promise((resolve, reject) => {
+    let code = ''
+    let signup = null
+    let settled = false
+    const finish = () => {
+      if (!settled && code && signup?.waba_id && signup?.phone_number_id) {
+        settled = true
+        cleanup()
+        resolve({
+          state: config.state,
+          code,
+          business_account_id: String(signup.waba_id),
+          phone_number_id: String(signup.phone_number_id),
+        })
+      }
+    }
+    const cleanup = () => {
+      window.removeEventListener('message', onMessage)
+      window.clearTimeout(timeout)
+    }
+    const fail = (message) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      reject(new Error(message))
+    }
+    const onMessage = (event) => {
+      if (!['https://www.facebook.com', 'https://web.facebook.com'].includes(event.origin)) return
+      let payload = event.data
+      if (typeof payload === 'string') {
+        try { payload = JSON.parse(payload) } catch { return }
+      }
+      if (payload?.type !== 'WA_EMBEDDED_SIGNUP') return
+      if (payload.event === 'FINISH') {
+        signup = payload.data || {}
+        finish()
+      } else if (payload.event === 'CANCEL') {
+        fail('WhatsApp connection was cancelled.')
+      } else if (payload.event === 'ERROR') {
+        fail(payload.data?.error_message || 'WhatsApp Embedded Signup failed.')
+      }
+    }
+    const timeout = window.setTimeout(
+      () => fail('WhatsApp connection timed out. Please try again.'),
+      5 * 60 * 1000,
+    )
+    window.addEventListener('message', onMessage)
+    FB.login(
+      (response) => {
+        code = response?.authResponse?.code || ''
+        if (!code) {
+          fail('Meta did not authorize the WhatsApp connection.')
+          return
+        }
+        finish()
+      },
+      {
+        config_id: config.config_id,
+        response_type: 'code',
+        override_default_response_type: true,
+        extras: {
+          setup: {},
+          featureType: '',
+          sessionInfoVersion: '3',
+        },
+      },
+    )
+  })
+}
+
 /**
  * POST /api/social-posts/posts/
  * Create a new social post (draft or scheduled).
