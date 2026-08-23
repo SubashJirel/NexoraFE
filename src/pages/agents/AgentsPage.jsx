@@ -9,8 +9,10 @@ import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Avatar from '@/components/ui/Avatar'
 import Input from '@/components/ui/Input'
+import PhoneInput from '@/components/ui/PhoneInput'
 import { PageSpinner } from '@/components/ui/Spinner'
 import { cn } from '@/lib/cn'
+import { isValidNepalPhone } from '@/utils/phone'
 
 // ── AgentsPage ────────────────────────────────────────────────
 export default function AgentsPage() {
@@ -251,6 +253,7 @@ function AgentFormModal({ title, agent, onClose }) {
   const [form, setForm] = useState({
     full_name: agent?.full_name ?? '',
     email:     agent?.email    ?? '',
+    phone:     agent?.phone    ?? '',
     password:  '',
   })
   const [errors, setErrors] = useState({})
@@ -266,6 +269,7 @@ function AgentFormModal({ title, agent, onClose }) {
     if (!form.full_name.trim())           e.full_name = 'Full name is required.'
     if (!form.email.trim())               e.email = 'Email is required.'
     else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = 'Enter a valid email.'
+    if (form.phone && !isValidNepalPhone(form.phone)) e.phone = 'Enter 10 digits starting with 97, 98, or 01.'
     if (!isEdit && form.password.length < 8)   e.password = 'Password must be at least 8 characters.'
     return e
   }
@@ -282,13 +286,14 @@ function AgentFormModal({ title, agent, onClose }) {
 
     if (isEdit) {
       // Only send password if the user filled it in
-      const payload = { full_name: form.full_name.trim(), email: form.email.trim().toLowerCase() }
+      const payload = { full_name: form.full_name.trim(), email: form.email.trim().toLowerCase(), phone: form.phone }
       if (form.password) payload.password = form.password
       updateMutation.mutate(payload)
     } else {
       createMutation.mutate({
         full_name: form.full_name.trim(),
         email:     form.email.trim().toLowerCase(),
+        phone:     form.phone,
         password:  form.password,
       })
     }
@@ -339,6 +344,13 @@ function AgentFormModal({ title, agent, onClose }) {
               value={form.email}
               onChange={(e) => handleChange('email', e.target.value)}
               error={errors.email}
+              disabled={isPending}
+            />
+            <PhoneInput
+              label="Phone"
+              value={form.phone}
+              onChange={(value) => handleChange('phone', value)}
+              error={errors.phone}
               disabled={isPending}
             />
             <Input

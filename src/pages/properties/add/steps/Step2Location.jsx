@@ -1,5 +1,6 @@
 import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
+import LocationPicker from '@/components/maps/LocationPicker'
 
 const NEPAL_DISTRICTS = [
   'Achham', 'Arghakhanchi', 'Baglung', 'Baitadi', 'Bajhang', 'Bajura', 'Banke', 'Bara',
@@ -84,43 +85,22 @@ export default function Step2Location({ form, errors, onChange }) {
         error={errors.address}
       />
 
-      {/* GPS coordinates */}
-      <div className="grid grid-cols-2 gap-4">
-        <Input
-          label="Latitude"
-          type="number"
-          placeholder="e.g. 27.7172"
-          value={form.latitude}
-          onChange={(e) => onChange('latitude', e.target.value)}
-          hint="Optional — for map pin"
-        />
-        <Input
-          label="Longitude"
-          type="number"
-          placeholder="e.g. 85.3240"
-          value={form.longitude}
-          onChange={(e) => onChange('longitude', e.target.value)}
-          hint="Optional — for map pin"
-        />
-      </div>
+      <LocationPicker
+        latitude={form.latitude}
+        longitude={form.longitude}
+        title="Property map location"
+        description="Search for the property area or a nearby landmark, or click the map to place a draggable pin. The map starts from Nepal."
+        savedLocationLabel="Saved property location"
+        onChange={({ latitude, longitude }) => {
+          onChange('latitude', latitude ?? '')
+          onChange('longitude', longitude ?? '')
+        }}
+      />
 
       <label className="flex items-start gap-3 rounded-xl border border-[#DDE5E3] bg-[#F8FAFA] p-4 text-sm text-[#263238]">
         <input type="checkbox" className="mt-0.5" checked={form.show_exact_location_publicly !== false} onChange={(e) => onChange('show_exact_location_publicly', e.target.checked)} />
         <span><strong className="block">Show exact location publicly</strong><small className="mt-1 block text-[#637079]">Turn this off to show only municipality, district, and province while keeping the precise address inside the CRM.</small></span>
       </label>
-
-      {/* Map placeholder */}
-      <div
-        className="rounded-xl border border-dashed border-[#DDE5E3] bg-[#F8FAFA] h-40 flex flex-col items-center justify-center gap-2 text-[#8b969d] cursor-pointer hover:border-[#B8C9C5] transition-colors"
-        onClick={() => {}}
-      >
-        <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" strokeLinecap="round" strokeLinejoin="round"/>
-          <circle cx="12" cy="9" r="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-        <p className="text-xs font-medium">Click to Pin Precise Location</p>
-        <p className="text-[10px] text-[#b2b9be]">Interactive map — coming soon</p>
-      </div>
     </div>
   )
 }

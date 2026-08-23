@@ -227,9 +227,19 @@ function SiteFooter() {
         <div>
           <p className="text-xs font-semibold text-[#263238] mb-3">Quick Links</p>
           <ul className="space-y-2">
-            {['Privacy Policy', 'Terms of Service', 'Support Center'].map((l) => (
-              <li key={l}>
-                <a href="#" className="text-xs text-[#637079] hover:text-[#496B5A] transition-colors">{l}</a>
+            {[
+              { label: 'Privacy Policy', href: 'https://www.nexorarealtyos.com/privacy-policy' },
+              { label: 'Terms of Service', href: 'https://www.nexorarealtyos.com/terms-of-service' },
+            ].map((link) => (
+              <li key={link.href}>
+                <a
+                  href={link.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-[#637079] hover:text-[#496B5A] transition-colors"
+                >
+                  {link.label}
+                </a>
               </li>
             ))}
           </ul>

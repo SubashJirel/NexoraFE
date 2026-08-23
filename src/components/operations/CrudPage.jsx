@@ -4,6 +4,7 @@ import { Edit3, ExternalLink, FileText, Plus, Search, Trash2, Upload, X } from '
 import { Card } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import PhoneInput from '@/components/ui/PhoneInput'
 import Select from '@/components/ui/Select'
 import Textarea from '@/components/ui/Textarea'
 import { PageSpinner } from '@/components/ui/Spinner'
@@ -138,6 +139,7 @@ export default function CrudPage({ resource, title, description, fields, columns
 
 function Field({ field, value, onChange, localization }) {
   const className = field.full ? 'sm:col-span-2' : ''
+  if (field.type === 'phone') return <PhoneInput className={className} label={localization.t(field.label)} value={value} onChange={onChange} required={field.required} />
   if (field.type === 'textarea') return <Textarea className={className} label={localization.t(field.label)} value={value} onChange={(event) => onChange(event.target.value)} required={field.required} rows={3} />
   if (field.type === 'select') return <Select className={className} label={localization.t(field.label)} value={value} onChange={(event) => onChange(event.target.value)} required={field.required}><option value="">{localization.t('Select')}…</option>{(field.options || []).map((option) => { const item = typeof option === 'string' ? { value: option, label: option.replaceAll('_', ' ') } : option; return <option key={item.value} value={item.value}>{localization.t(item.label, item.label)}</option> })}</Select>
   if (field.type === 'multiselect') return <label className={`text-xs font-medium text-[#4f5c64] ${className}`}>{localization.t(field.label)}<select multiple className="mt-1 min-h-28 w-full rounded-lg border border-[#DDE5E3] p-2 text-sm" value={Array.isArray(value) ? value.map(String) : []} onChange={(event) => onChange([...event.target.selectedOptions].map((option) => Number(option.value)))}>{(field.options || []).map((option) => <option key={option.value} value={option.value}>{localization.t(option.label, option.label)}</option>)}</select></label>

@@ -3,6 +3,7 @@ import { Award, BriefcaseBusiness, Camera, CheckCircle2, Home, UserRound } from 
 import { useAgentProfile, useUpdateAgentProfile } from '@/hooks/useAgentProfile'
 import { Card } from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
+import PhoneInput from '@/components/ui/PhoneInput'
 import Textarea from '@/components/ui/Textarea'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
@@ -70,7 +71,7 @@ function ProfileForm({ profile }) {
           <div className="mb-5 flex items-center gap-2 border-b border-[#DDE5E3] pb-4"><UserRound size={18} className="text-[#496B5A]" /><h3 className="font-semibold text-[#263238]">Professional details</h3></div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Input label="Full name" value={form.full_name} onChange={(e) => set('full_name', e.target.value)} required />
-            <Input label="Phone" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
+            <PhoneInput label="Phone" value={form.phone} onChange={(value) => set('phone', value)} />
             <Input label="Designation" value={form.designation} onChange={(e) => set('designation', e.target.value)} placeholder="Senior Property Advisor" />
             <Input label="Location" value={form.location} onChange={(e) => set('location', e.target.value)} />
             <Input label="Years of experience" type="number" min="0" max="80" value={form.years_experience} onChange={(e) => set('years_experience', e.target.value)} />
