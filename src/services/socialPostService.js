@@ -274,5 +274,6 @@ export async function updateSocialPost(id, payload) {
  * @param {number} id - post ID to delete
  */
 export async function deleteSocialPost(id) {
-  await apiClient.delete(`/social-posts/posts/${id}/`)
+  const { data } = await apiClient.delete(`/social-posts/posts/${id}/`)
+  return data
 }

@@ -118,9 +118,16 @@ export function useDeleteSocialPost({ onSuccess } = {}) {
 
   return useMutation({
     mutationFn: (id) => deleteSocialPost(id),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: SOCIAL_POSTS_KEY })
-      toast.success('Post deleted.')
+      if (data?.code === 'post_deleted_with_remote_warnings') {
+        toast(data.detail, {
+          icon: '⚠️',
+          duration: 8000,
+        })
+      } else {
+        toast.success('Post deleted from Nexora and connected social platforms.')
+      }
       onSuccess?.()
     },
     onError: (err) => {
