@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { UserPlus } from 'lucide-react'
 import Input from '@/components/ui/Input'
+import PhoneInput from '@/components/ui/PhoneInput'
 import Select from '@/components/ui/Select'
 import Textarea from '@/components/ui/Textarea'
 import Button from '@/components/ui/Button'
@@ -8,6 +9,7 @@ import { useCreateLead, useUpdateLead } from '@/hooks/useLeads'
 import { useAgents } from '@/hooks/useAgents'
 import { LEAD_SOURCES, PROPERTY_TYPES, PURPOSES, LEAD_STATUSES } from '../leadsConstants'
 import { useResource } from '@/hooks/useOperations'
+import { isValidNepalPhone } from '@/utils/phone'
 
 const EMPTY = {
   full_name:          '',
@@ -68,7 +70,8 @@ export default function LeadFormModal({ lead, onClose }) {
   function validate() {
     const e = {}
     if (!form.full_name.trim()) e.full_name = 'Name is required.'
-    if (!form.phone.trim())     e.phone     = 'Phone is required.'
+    if (!form.phone.trim()) e.phone = 'Phone is required.'
+    else if (!isValidNepalPhone(form.phone)) e.phone = 'Enter 10 digits starting with 97, 98, or 01.'
     if (form.email && !/\S+@\S+\.\S+/.test(form.email)) e.email = 'Invalid email.'
     return e
   }
@@ -132,12 +135,10 @@ export default function LeadFormModal({ lead, onClose }) {
                   disabled={isPending}
                   autoFocus
                 />
-                <Input
+                <PhoneInput
                   label="Phone *"
-                  type="tel"
-                  placeholder="98XXXXXXXX"
                   value={form.phone}
-                  onChange={(e) => set('phone', e.target.value)}
+                  onChange={(value) => set('phone', value)}
                   error={errors.phone}
                   disabled={isPending}
                 />

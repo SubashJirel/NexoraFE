@@ -8,6 +8,7 @@ import PublicAgencyLayout from '@/components/public/PublicAgencyLayout'
 import RequireAuth from './guards/RequireAuth'
 import RequireGuest from './guards/RequireGuest'
 import { PageSpinner } from '@/components/ui/Spinner'
+import RouteErrorPage from '@/pages/errors/RouteErrorPage'
 
 // ── Lazy pages ───────────────────────────────────────────────
 // Auth
@@ -41,6 +42,7 @@ export const router = createBrowserRouter([
   {
     path: 'agency/:slug',
     element: <PublicAgencyLayout />,
+    errorElement: <RouteErrorPage />,
     children: [
       {
         index: true,
@@ -72,6 +74,7 @@ export const router = createBrowserRouter([
         <AuthLayout />
       </RequireGuest>
     ),
+    errorElement: <RouteErrorPage />,
     children: [
       { path: 'login',           element: S(LoginPage) },
       { path: 'register',        element: S(RegisterPage) },
@@ -90,6 +93,7 @@ export const router = createBrowserRouter([
         <AppLayout />
       </RequireAuth>
     ),
+    errorElement: <RouteErrorPage />,
     children: [
       {
         path: 'dashboard',
@@ -205,6 +209,6 @@ export const router = createBrowserRouter([
   },
 
   // ── Error pages ────────────────────────────────────────────
-  { path: '403', element: S(ForbiddenPage) },
-  { path: '*',   element: S(NotFoundPage) },
+  { path: '403', element: S(ForbiddenPage), errorElement: <RouteErrorPage /> },
+  { path: '*',   element: S(NotFoundPage), errorElement: <RouteErrorPage /> },
 ])

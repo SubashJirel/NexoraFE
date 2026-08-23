@@ -21,6 +21,7 @@ import toast from "react-hot-toast";
 import { Card } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import PhoneInput from "@/components/ui/PhoneInput";
 import Textarea from "@/components/ui/Textarea";
 import { PageSpinner } from "@/components/ui/Spinner";
 import {
@@ -42,6 +43,8 @@ import { useAuthStore } from "@/store/authStore";
 import { useProperties } from "@/hooks/useProperties";
 import WebsiteLivePreview from "@/components/website-editor/WebsiteLivePreview";
 import LocationPicker from "@/components/maps/LocationPicker";
+import DelimitedListInput from "@/components/ui/DelimitedListInput";
+import { isValidNepalPhone } from "@/utils/phone";
 
 const STEPS = [
   [
@@ -386,6 +389,8 @@ function WebsiteWizard({ initial }) {
   });
 
   const config = form.website_draft_config;
+  const hasInvalidPhone = ["public_phone", "whatsapp_number", "viber_number"]
+    .some((field) => config[field] && !isValidNepalPhone(config[field]));
   const payload = useMemo(
     () => ({
       website_onboarding_step: step,
@@ -406,10 +411,11 @@ function WebsiteWizard({ initial }) {
       JSON.stringify({ step, form, savedAt: Date.now() }),
     );
     clearTimeout(timer.current);
+    if (hasInvalidPhone) return undefined;
     const revision = editRevisionRef.current;
     timer.current = setTimeout(() => saveMutation.mutate({ data: payload, revision }), 900);
     return () => clearTimeout(timer.current);
-  }, [dirty, form, step, localKey, payload]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dirty, form, step, localKey, payload, hasInvalidPhone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const warnBeforeLeaving = (event) => {
@@ -463,6 +469,11 @@ function WebsiteWizard({ initial }) {
     toast.success("Organization details copied into the website draft.");
   }
   async function save(target = step) {
+    if (hasInvalidPhone) {
+      setSaveState("error");
+      toast.error("Enter 10 digits starting with 97, 98, or 01 for each phone number.");
+      return false;
+    }
     clearTimeout(timer.current);
     setSaveState("saving");
     try {
@@ -555,9 +566,11 @@ function WebsiteWizard({ initial }) {
         </div>
         <div className="text-right">
           <p
-            className={`text-xs font-semibold ${saveState === "error" ? "text-red-600" : saveState === "conflict" ? "text-amber-700" : "text-[#637079]"}`}
+            className={`text-xs font-semibold ${hasInvalidPhone || saveState === "error" ? "text-red-600" : saveState === "conflict" ? "text-amber-700" : "text-[#637079]"}`}
           >
-            {saveState === "saving"
+            {hasInvalidPhone
+              ? "Complete or correct the phone number"
+              : saveState === "saving"
               ? "Saving…"
               : saveState === "error"
                 ? "Save failed — retry available"
@@ -873,20 +886,20 @@ function WebsiteEditorStep(props) {
           value={c.public_email}
           onChange={(e) => changeConfig("public_email", e.target.value)}
         />
-        <Input
+        <PhoneInput
           label="Public phone"
           value={c.public_phone}
-          onChange={(e) => changeConfig("public_phone", e.target.value)}
+          onChange={(value) => changeConfig("public_phone", value)}
         />
-        <Input
+        <PhoneInput
           label="WhatsApp"
           value={c.whatsapp_number}
-          onChange={(e) => changeConfig("whatsapp_number", e.target.value)}
+          onChange={(value) => changeConfig("whatsapp_number", value)}
         />
-        <Input
+        <PhoneInput
           label="Viber"
           value={c.viber_number}
-          onChange={(e) => changeConfig("viber_number", e.target.value)}
+          onChange={(value) => changeConfig("viber_number", value)}
         />
         <div className="sm:col-span-2">
           <Input
@@ -1028,15 +1041,17 @@ function WebsiteEditorStep(props) {
           value={c.story}
           onChange={(e) => changeConfig("story", e.target.value)}
         />
-        <Input
-          label="Specialities (comma separated)"
-          value={c.specialities.join(", ")}
-          onChange={(e) => changeConfig("specialities", csv(e.target.value))}
+        <DelimitedListInput
+          label="Specialities"
+          value={c.specialities}
+          placeholder="Residential sales, Commercial property, Rentals"
+          onChange={(values) => changeConfig("specialities", values)}
         />
-        <Input
-          label="Areas served (comma separated)"
-          value={c.areas_served.join(", ")}
-          onChange={(e) => changeConfig("areas_served", csv(e.target.value))}
+        <DelimitedListInput
+          label="Areas served"
+          value={c.areas_served}
+          placeholder="Kathmandu, Lalitpur, Bhaktapur"
+          onChange={(values) => changeConfig("areas_served", values)}
         />
         <ListEditor
           title="Services"
@@ -1801,12 +1816,6 @@ function readLocal(key) {
   } catch {
     return null;
   }
-}
-function csv(value) {
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
 }
 function fontOptions() {
   return [

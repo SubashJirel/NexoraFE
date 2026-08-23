@@ -51,7 +51,14 @@ function resultLabel(result) {
   ].filter(Boolean))].join(", ");
 }
 
-export default function LocationPicker({ latitude, longitude, onChange }) {
+export default function LocationPicker({
+  latitude,
+  longitude,
+  onChange,
+  title = "Office map location",
+  description = "Search for a place or landmark, or click the map to place a draggable pin.",
+  savedLocationLabel = "Saved office location",
+}) {
   const mapRef = useRef(null);
   const requestRef = useRef(null);
   const hasLocation = validCoordinate(latitude, -90, 90) && validCoordinate(longitude, -180, 180);
@@ -63,7 +70,7 @@ export default function LocationPicker({ latitude, longitude, onChange }) {
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [message, setMessage] = useState("");
-  const [selectedLabel, setSelectedLabel] = useState(hasLocation ? "Saved office location" : "");
+  const [selectedLabel, setSelectedLabel] = useState(hasLocation ? savedLocationLabel : "");
 
   useEffect(() => () => requestRef.current?.abort(), []);
 
@@ -139,9 +146,9 @@ export default function LocationPicker({ latitude, longitude, onChange }) {
       <div className="space-y-3 border-b border-[#DDE5E3] p-4">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-[#263238]">Office map location</p>
+            <p className="text-sm font-semibold text-[#263238]">{title}</p>
             <p className="mt-1 text-xs leading-5 text-[#637079]">
-              Search for a place or landmark, or click the map to place a draggable pin.
+              {description}
             </p>
           </div>
           {hasLocation && (

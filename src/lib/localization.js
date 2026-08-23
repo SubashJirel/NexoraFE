@@ -1,4 +1,5 @@
 import { adToBs, bsToAd } from '@sbmdkl/nepali-date-converter'
+import { isValidNepalPhone, nepalPhoneNationalDigits } from '../utils/phone.js'
 
 export const NEPAL_TIMEZONE = 'Asia/Kathmandu'
 const NEPALI_DIGITS = '०१२३४५६७८९'
@@ -97,12 +98,13 @@ export function formatCurrency(value, { language = 'en', nepaliDigits = false } 
 }
 
 export function formatPhone(value, { nepaliDigits = false } = {}) {
-  let digits = toLatinDigits(value || '').replace(/\D/g, '')
-  if (digits.startsWith('00977')) digits = digits.slice(5)
-  else if (digits.startsWith('977') && digits.length > 10) digits = digits.slice(3)
-  let rendered = digits.length === 10 && digits.startsWith('9')
-    ? `+977 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`
-    : value || ''
+  const digits = nepalPhoneNationalDigits(value)
+  let rendered = value || ''
+  if (isValidNepalPhone(value)) {
+    rendered = digits.startsWith('01')
+      ? `+977 ${digits.slice(0, 2)}-${digits.slice(2, 6)} ${digits.slice(6)}`
+      : `+977 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`
+  }
   if (nepaliDigits) rendered = toNepaliDigits(rendered)
   return rendered
 }

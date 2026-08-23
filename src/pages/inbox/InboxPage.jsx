@@ -30,6 +30,7 @@ import Avatar from '@/components/ui/Avatar'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import PhoneInput from '@/components/ui/PhoneInput'
 import { cn } from '@/lib/cn'
 import UnifiedLeadInbox from './UnifiedLeadInbox'
 import LeadAutomationPanel from './LeadAutomationPanel'
@@ -272,7 +273,7 @@ function CreateLeadDialog({ conversation, onClose }) {
       <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-2xl">
         <div className="flex items-center justify-between"><div><h3 className="font-semibold text-[#263238]">Create lead</h3><p className="text-xs text-[#637079]">Link this conversation to a new CRM lead.</p></div><button type="button" onClick={onClose}><X size={17} /></button></div>
         <Input label="Full name" value={form.full_name} onChange={(e) => set('full_name', e.target.value)} required />
-        <Input label="Phone" value={form.phone} onChange={(e) => set('phone', e.target.value)} required />
+        <PhoneInput label="Phone" value={form.phone} onChange={(value) => set('phone', value)} required />
         <Input label="Email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
         <div className="flex justify-end gap-2"><Button type="button" variant="outlined" onClick={onClose}>Cancel</Button><Button type="submit" loading={mutation.isPending}>Create lead</Button></div>
       </form>

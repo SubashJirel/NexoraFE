@@ -5,6 +5,7 @@ import { useCurrentAgency, useUpdateAgency } from '@/hooks/useAgency'
 import { useAuthStore } from '@/store/authStore'
 import { Card } from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
+import PhoneInput from '@/components/ui/PhoneInput'
 import Textarea from '@/components/ui/Textarea'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
@@ -87,7 +88,7 @@ function OrganizationSettingsForm({ agency }) {
             <Textarea label="Organization description" rows={4} value={form.about} onChange={(event) => set('about', event.target.value)} hint="Internal/default profile text. Copy it to the website draft explicitly from Website Studio." />
           </div>
           <Input label="Default agency email" type="email" value={form.email} onChange={(event) => set('email', event.target.value)} hint="Used as an organization default, not as an automatic website update." />
-          <Input label="Default agency phone" value={form.phone} onChange={(event) => set('phone', event.target.value)} hint="Used as an organization default, not as an automatic website update." />
+          <PhoneInput label="Default agency phone" value={form.phone} onChange={(value) => set('phone', value)} hint="10 digits; used as an organization default, not as an automatic website update." />
         </div>
       </SettingsCard>
 

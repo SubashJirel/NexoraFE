@@ -13,7 +13,7 @@ export default function ContactsPage() {
   const client = useQueryClient()
   const fields = [
     { name: 'full_name', label: 'Full name', required: true }, { name: 'contact_type', label: 'Contact type', type: 'select', options: TYPES, required: true },
-    { name: 'email', label: 'Email', type: 'email' }, { name: 'phone', label: 'Phone' },
+    { name: 'email', label: 'Email', type: 'email' }, { name: 'phone', label: 'Phone', type: 'phone' },
     { name: 'company', label: 'Company' }, { name: 'source', label: 'Source' },
     { name: 'assigned_to', label: 'Assigned agent', type: 'select', options: opts(agents.data) },
     { name: 'tags', label: 'Tags (comma separated)', type: 'tags' },
