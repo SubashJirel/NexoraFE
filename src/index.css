@@ -1,3 +1,58 @@
+
 @import './styles/tokens.css';
 @import 'tailwindcss';
 
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ── Global: hide all scrollbars at rest ────────────────────── */
+* {
+  scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+
+/* ── hover-scrollbar: subtle scrollbar on hover (light bg) ──── */
+.hover-scrollbar:hover {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(38, 50, 56, 0.2) transparent;
+}
+
+.hover-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: rgba(38, 50, 56, 0.2);
+}
+
+.hover-scrollbar:hover::-webkit-scrollbar-thumb:hover {
+  background: rgba(38, 50, 56, 0.38);
+}
+
+/* ── hover-scrollbar-dark: subtle scrollbar on hover (dark bg) ─ */
+.hover-scrollbar-dark:hover {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+.hover-scrollbar-dark:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.hover-scrollbar-dark:hover::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.38);
+}
